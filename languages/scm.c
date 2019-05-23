@@ -31,7 +31,11 @@ void lambdanative_payload_setup()
   setup_params.debug_settings = debug_settings;
   ___setup(&setup_params);
   #if defined(ANDROID)
-  ___disable_heartbeat_interrupts();
+  #if (___VERSION < 409002 )
+  ___disable_heartbeat_interrupts()
+  #else
+  ___cleanup_heartbeat_interrupt_handling();
+  #endif
   #endif
 }
 
