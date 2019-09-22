@@ -93,6 +93,24 @@ void android_launch_url(char* urlstring){
   }
 }
 
+char *android_getFilesDir()
+{
+  static const char *str = NULL;
+  if(str==NULL) {
+    jstring jstr = NULL;
+    JNIEnv *env = GetJNIEnv();
+    if (env&&globalObj){
+      jclass main_class = (*env)->FindClass(env, "@SYS_PACKAGE_SLASH@/@SYS_APPNAME@");
+      jmethodID method = (*env)->GetMethodID(env, main_class, "ln_getFilesDir", "()Ljava/lang/String;");
+      jstr = (jstring) method ? (*env)->CallObjectMethod(env, globalObj, method, jstr) : NULL;
+      str  = jstr ? (*env)->GetStringUTFChars(env, jstr, 0) : NULL;
+      // (*env)->ReleaseStringUTFChars(env, jstr, NULL);
+    }
+  }
+  return str;
+}
+
+
 // Add code here if needed for modules, such as GPS.
 @ANDROID_C_ADDITIONS@
 

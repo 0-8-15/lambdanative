@@ -87,6 +87,10 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     }
   };
 
+  public String ln_getFilesDir() {
+      return getFilesDir().toString();
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
