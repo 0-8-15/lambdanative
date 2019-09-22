@@ -51,12 +51,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // event hook
 void Java_@SYS_PACKAGE_UNDERSCORE@_myRenderer_nativeEvent(JNIEnv* e, jobject o, jint t, jint x, jint y){
    if ((*e)->ExceptionCheck(e)) return;
+ fprintf(stderr, "bootstrap.c.in: render ffi_event %d start\n", t);
    ffi_event((int)t,(int)x,(int)y); 
+ fprintf(stderr, "bootstrap.c.in: render ffi_event %d done\n", t);
 }
 
 void Java_@SYS_PACKAGE_UNDERSCORE@_@SYS_APPNAME@_nativeEvent(JNIEnv* e, jobject o, jint t, jint x, jint y){
   if ((*e)->ExceptionCheck(e)) return;
+ fprintf(stderr, "bootstrap.c.in: ffi_event %d start\n", t);
   ffi_event((int)t,(int)x,(int)y); 
+ fprintf(stderr, "bootstrap.c.in: ffi_event %d done\n", t);
 }
 
 // JNI Hooks and Global Objects

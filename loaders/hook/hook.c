@@ -57,9 +57,12 @@ void ffi_event(int t, int x, int y)
       FFI_EVENT_INIT
       lambdanative_needsinit=0;
   } 
+  fprintf(stderr, "hook.c/ffi_event: trying to lock pthread_mutex\n");
   FFI_EVENT_LOCK
+  fprintf(stderr, "hook.c/ffi_event: got pthread_mutex\n");
   if (!lambdanative_needsinit&&t) lambdanative_payload_event(t,x,y);
   if (t==EVENT_TERMINATE) { lambdanative_payload_cleanup(); exit(0); }
+  fprintf(stderr, "hook.c/ffi_event: done\n");
   FFI_EVENT_UNLOCK
 }
 #endif // STANDALONE
