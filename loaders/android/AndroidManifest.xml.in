@@ -19,6 +19,7 @@
     </activity>
     @ANDROID_XML_RECEIVERS@
     @ANDROID_XML_SERVICES@
+    @ANDROID_XML_PROVIDERS@
   </application>
 @ANDROID_XML_PERMISSIONS@
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>

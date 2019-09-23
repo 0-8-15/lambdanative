@@ -53,6 +53,11 @@ android_subst()
   ac_subst ANDROID_JAVA_ADDITIONS "@$d/ANDROID_java_additions"
   ac_subst ANDROID_XML_PERMISSIONS "@$d/ANDROID_xml_permissions"
   ac_subst ANDROID_INTENT_FILTERS "@$d/ANDROID_intent_filters"
+  if [ $SYS_ANDROIDAPI -lt 23 ]; then
+    ac_subst ANDROID_XML_PROVIDERS ""
+  else
+    ac_subst ANDROID_XML_PROVIDERS "@$d/ANDROID_xml_providers"
+  fi
   ac_subst ANDROID_XML_RECEIVERS "@$d/ANDROID_xml_receivers"
   ac_subst ANDROID_XML_SERVICES "@$d/ANDROID_xml_services"
   ac_subst ANDROID_ACTIVITY_ATTRIBUTES "@$d/ANDROID_activity_attributes"
@@ -131,7 +136,17 @@ else
 assert "### Gradle is not supported"
 fi
 
-if [ -f $ANDROIDSDK/extras/android/support/v4/android-support-v4.jar ]; then
+for m in $modules; do
+  modpath=`locatedir modules/$m silent`
+  if [ -d $modpath/xml ]; then
+    test -d $tmpdir/res/xml/ || mkdir -p $tmpdir/res/xml/
+    cp $modpath/xml/*.xml $tmpdir/res/xml/
+  fi
+done
+
+if [ -f $ANDROIDSDK/extras/android/m2repository/com/android/support/support-v4/19.1.0/support-v4-19.1.0.jar ]; then
+  cp $ANDROIDSDK/extras/android/m2repository/com/android/support/support-v4/19.1.0/support-v4-19.1.0.jar $tmpdir/libs
+elif [ -f $ANDROIDSDK/extras/android/support/v4/android-support-v4.jar ]; then
   cp -r $ANDROIDSDK/extras/android/support/v4/android-support-v4.jar $tmpdir/libs
 fi
 
