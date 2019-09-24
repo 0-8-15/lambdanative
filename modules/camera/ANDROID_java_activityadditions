@@ -1,4 +1,5 @@
 /* -*-java-*- */
+
 private String camera_tmp;
 private String camera_fnl;
 
