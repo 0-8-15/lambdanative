@@ -75,6 +75,7 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   //Variable declarations needed for modules, e.g. gps
   @ANDROID_JAVA_VARIABLES@
 
+  int idle_tmScheduleRate = 250;
   Timer idle_tm = new Timer();
   TimerTask idle_task = new TimerTask() {
     public void run() {
@@ -85,6 +86,45 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
       });
     }
   };
+
+  private boolean ln_checkSelfPermission(String permission) {
+    @IF_ANDROIDAPI_GT_22@
+    if(getApplicationContext().checkSelfPermission(permission)
+       !=  android.content.pm.PackageManager.PERMISSION_GRANTED)
+      return false;
+    /* end of IF_ANDROIDAPI_GT_22 */
+    return true;
+  }
+
+  public boolean checkOrRequestPermission(String permission) {
+    @IF_ANDROIDAPI_GT_22@
+    if(!ln_checkSelfPermission(permission)) {
+      requestPermissions(new String[] { permission }, 1);
+      return ln_checkSelfPermission(permission);
+    }
+    /* end of IF_ANDROIDAPI_GT_22 */
+    return true;
+  }
+
+  @Override
+  public void startActivityForResult(Intent intent, int cont) {
+      try {
+          // System.err.println( "LN: startActivityForResult "  + " for intent " + intent);
+          /* TBD we might want to avoid some exceptions for
+           * resolveActivity see:
+           * https://developer.android.com/training/camera/photobasics
+           *
+           * if (intent.resolveActivity(getPackageManager()) != null) {...
+           */
+          super.startActivityForResult(intent, cont);
+          // System.err.println( "LN done: startActivityForResult "  + " for intent " + intent);
+          // This seems to be a good idea.  But apparently it is not:
+          // finishActivity(cont);
+      } catch (Exception e) {
+          System.err.print("startActivityForResult(Intent " + intent + ") Error: " + e);
+          e.printStackTrace(System.err);
+      }
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -109,11 +149,14 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     mGLView = new xGLSurfaceView(this);
     setContentView(mGLView);
     mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+
+    checkOrRequestPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONCREATE@
 
     // start EVENT_IDLE 
-    idle_tm.scheduleAtFixedRate(idle_task, 0, 250);
+    if(idle_tmScheduleRate > 0) idle_tm.scheduleAtFixedRate(idle_task, 0, idle_tmScheduleRate);
 
     nativeInstanceInit();
   }
