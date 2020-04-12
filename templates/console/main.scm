@@ -6,7 +6,7 @@
 (let loop ()
   (with-exception-catcher (lambda (e)
     (for-each display (list (exception->string e) "\n")) #f)
-      (lambda () (##repl-debug)))
+      (lambda () (##repl-debug #f #t)))
   (loop))
 
 ;; eof
