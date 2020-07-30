@@ -6,7 +6,7 @@ package_download $PKGURL $PKGHASH
 package_patch
 
 echo "==> Building library source..."
-$SYS_CC -c -I. -I$SYS_PREFIX/include sqlite3.c
+$SYS_CC -c -I. -I$SYS_PREFIX/include -DSQLITE_ENABLE_FTS4 sqlite3.c
 assertfile sqlite3.o
 $SYS_AR ru $SYS_PREFIX/lib/libsqlite.a sqlite3.o  2> /dev/null
 $SYS_RANLIB $SYS_PREFIX/lib/libsqlite.a  
