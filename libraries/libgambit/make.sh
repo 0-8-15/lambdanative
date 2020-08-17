@@ -42,6 +42,10 @@ if [ -f $SYS_ROOT/targets/$SYS_PLATFORM/libgambc_enablesinglehost ]; then
   EXTRACONF="$EXTRACONF --enable-single-host"
 fi
 
+  EXTRACONF="$EXTRACONF --enable-single-host"
+
+EXTRACONF="$EXTRACONF --enable-poll"
+
 package_configure $EXTRACONF
 
 
