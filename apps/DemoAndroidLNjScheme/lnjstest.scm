@@ -8,6 +8,7 @@
 ;;
 ;; (error "nananana")
 
+
 (let* ((app (android-app-class))
        (this ((method "me" app)))
        (ln-mglview (method "LNmGLView" app)) ;; deprecated
@@ -33,6 +34,11 @@
         ;;
         (onclick-set! (method "LNjScheme_Set_OnClickListener" app "android.view.View" "java.lang.Object"))
         (checkOrRequestPermission (method "checkOrRequestPermission" app "java.lang.String"))
+        (websettings (method "getSettings" "android.webkit.WebView"))
+        ;;
+        (wvs-zoom-support-set! (method "setSupportZoom" "android.webkit.WebSettings" "boolean"))
+        (wvs-zoom-builtin-set! (method "setBuiltInZoomControls" "android.webkit.WebSettings" "boolean"))
+        (wvs-zoom-builtin-controls-set! (method "setDisplayZoomControls" "android.webkit.WebSettings" "boolean"))
         )
     (define (set-layout-vertical! x)
       (setOrientation x (intValue 1)))
@@ -51,6 +57,10 @@
       (let ((frame (new "android.widget.LinearLayout" this))
             (wv (new "android.webkit.WebView" (getApplicationContext this)))
             (frame2 (new "android.widget.LinearLayout" this)))
+        (let ((wvs (websettings wv)))
+          (wvs-zoom-support-set! wvs #t)
+          (wvs-zoom-builtin-set! wvs #t)
+          (wvs-zoom-builtin-controls-set! wvs #f))
         (set-layout-vertical! frame)
         (addView/params! frame2 ln-glview (new "android.view.ViewGroup$LayoutParams" (intValue -1) (intValue 280)))
         (arrange-in-order! main-layout (list frame))

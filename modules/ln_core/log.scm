@@ -150,9 +150,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (string-mapconcat (reverse tmp) ": ")))
 
 (define (log:exception-handler e)
-  (log-error (thread-name (current-thread)) ": " (exception->string e))
-  (log-trace (current-thread))
+  (set! exit (lambda x ((c-lambda (int) void "exit") (if (pair? x) (car x) 0))))
+  (let ((le.orig log-error))
+    (set!
+     log-error
+     (lambda (s . x)
+       (apply println port: (current-error-port) s x)
+       (apply le.orig s x))))
+  (log-error "Thread \"" (thread-name (current-thread)) "\": " (exception->string e))
+  (when (deadlock-exception? e)
+    (log-error "HALT")
+    (exit))
+  ;;(log-trace (current-thread)) ;; Seems not to work at least for deadlock-exception?
   (log-error "HALT")
+  ;; FIXME: this looks wrong
   (exit))
 
 ;; catch primordial thread exceptions

@@ -281,6 +281,17 @@ cp $SYS_PREFIX/include/LNCONFIG.h $tmpdir/jni
 ac_output loaders/android/bootstrap.c.in $tmpdir/jni/bootstrap.c
 cd $tmpdir
 
+APP_ABI=armeabi-v7a
+if [ "$ANDROIDAPI" -lt 19 ]; then APP_ABI=armeabi; fi
+case "X$ANDROIDARCH" in
+Xx86)
+  APP_ABI=x86
+;;
+Xmips)
+  APP_ABI=mips
+;;
+esac
+
 if [ $SYS_MODE = "debug" ]; then
   echo " => compiling payload module with debug options.."
   veval "NDK_MODULE_PATH=$tmpmoddir $ANDROIDNDK/ndk-build APP_ABI=\"$APP_ABI\" NDK_LOG=1 NDK_DEBUG=1"
@@ -296,6 +307,23 @@ for lib in $payload_libs; do
     cp $SYS_PREFIX/lib/$lib.jar $tmpdir/libs/
   fi
 done
+
+dbg_inspect() {
+    echo Waiting in $1
+    export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI SYS_STRIP
+    (cd $1 && bash -i) || exit 1
+}
+
+# transfering additonal .so's files
+sofilesdir=`locatedir apps/$SYS_APPNAME/android_sos silent`
+if [ -d "$sofilesdir" ]; then
+  echo " => building additional library files.."
+  ## (cd $sofilesdir; make)
+  cp -La $sofilesdir $tmpdir
+  ( export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI SYS_STRIP
+    cd $tmpdir/android_sos && make -r) || exit 1
+  # dbg_inspect $tmpdir/android_sos
+fi
 
 # manage hybrid apps
 if [ `has_module hybridapp` = yes ]; then
@@ -322,7 +350,7 @@ if [ `has_module hybridapp-xwalk` = yes ]; then
     cd $tmpdir
     if [ $use_android_tool = yes ]; then
       $ANDROIDSDK/tools/android --silent update project --target $ANDROIDSDKTARGET --path $tmpdir --library ../libxwalk
-    else 
+    else
       assert "## gradle is not supported"
     fi
     cd "$xwalk_here"
@@ -334,7 +362,7 @@ cat > $tmpdir/res/layout/main.xml << __EOF
 </org.xwalk.core.XWalkView>
 __EOF
   else
-    assert "crosswalk library not found?" 
+    assert "crosswalk library not found?"
   fi
 fi
 

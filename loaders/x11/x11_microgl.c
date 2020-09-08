@@ -228,8 +228,13 @@ void microgl_pollevents(void)
         microgl_hook(EVENT_CLOSE,0,0); 
         return;
       case ConfigureNotify:
-        if( event.xconfigure.width != win.w || event.xconfigure.height != win.h )
-          XResizeWindow( Dpy, win.Win, win.w, win.h);
+        if( event.xconfigure.width != win.w || event.xconfigure.height != win.h ) {
+          // That's the wrong thing to do: XResizeWindow( Dpy, win.Win, win.w, win.h);
+          // Just this does not help either!
+          win.w = event.xconfigure.width;
+          win.h = event.xconfigure.height;
+          microgl_hook(EVENT_INIT, win.w, win.h);
+        }
         break;
       case SelectionClear:
         if (copiedString) free(copiedString);
@@ -319,10 +324,11 @@ int microgl_open(int w, int h, int fs)
 
       atom=XInternAtom(Dpy,"_NET_WM_STATE",True); 
       if (atom!=None) {
-        Atom NET_WMHints[1];
+        Atom NET_WMHints[2];
         NET_WMHints[0] = XInternAtom( Dpy, "_NET_WM_STATE_FULLSCREEN",True);
+        NET_WMHints[1] = XInternAtom( Dpy, "_NET_WM_STATE_ABOVE",True); // does not help
         XChangeProperty(Dpy,win.Win,atom, XA_ATOM, 32, 
-          PropModeReplace, (unsigned char*)&NET_WMHints, 1);
+          PropModeReplace, (unsigned char*)&NET_WMHints, 2);
         success=1;
       }
 

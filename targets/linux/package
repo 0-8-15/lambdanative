@@ -37,11 +37,11 @@
 
 pkgfile="$SYS_PREFIXROOT/packages/$(echo $SYS_APPNAME)-$(echo $SYS_APPVERSION)-$(echo $SYS_PLATFORM).zip"
 rmifexists $pkgfile
-echo " => making generic zip archive $pkgfile.."
+#echo " => making generic zip archive $pkgfile.."
 cd $SYS_PREFIX
-veval "zip -y -r $pkgfile $SYS_APPNAME$SYS_APPFIX"
+#veval "zip -y -r $pkgfile $SYS_APPNAME$SYS_APPFIX"
 cd $here
-assertfile $pkgfile
-echo "=== $pkgfile"
+#assertfile $pkgfile
+#echo "=== $pkgfile"
 
 #eof
