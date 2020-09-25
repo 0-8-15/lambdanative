@@ -1,6 +1,6 @@
 #!/bin/sh
 # LambdaNative - a cross-platform Scheme framework
-# Copyright (c) 2009-2013, University of British Columbia
+# Copyright (c) 2009-2020, University of British Columbia
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
@@ -385,7 +385,7 @@ compile_payload()
   #--------
   # add the library objects
   for payload_lib in $payload_libs; do
-    tmp_objs=`ls -1 $SYS_PREFIX/build/$payload_lib/*.o | tr '\n' ' '`
+    tmp_objs=`ls -1 $SYS_PREFIX/build/$payload_lib/*.o 2> /dev/null | tr '\n' ' '`
     payload_objs="$tmp_objs $payload_objs"
   done
   #--------
@@ -875,10 +875,11 @@ make_setup_profile()
   fi
   mkdir -p $SYS_PREFIXROOT/packages
   mkdir -p $SYS_PREFIXROOT/build
-  SYS_ANDROIDAPI=$ANDROIDAPI
+  if [ "X$SYS_ANDROIDAPI" = "X" ]; then
+    SYS_ANDROIDAPI=$ANDROIDAPI
+  fi
   SYS_ANDROIDSDK=$ANDROIDSDK
   SYS_ANDROIDNDK=$ANDROIDNDK
-  SYS_ANDROIDARCH=$ANDROIDARCH
   SYS_HOSTEXEFIX=
   if [ "$SYS_HOSTPLATFORM" = "win32" ]; then
     SYS_HOSTEXEFIX=".exe"
@@ -952,10 +953,7 @@ make_setup_target()
   setup_target=$1
   assertfile $setup_target "Don't know how to setup a build for $SYS_PLATFORM on a $SYS_HOSTPLATFORM host"
   ac_reset
-  if [ "$SYS_PLATFORM" = "android" ] && [ "X$SYS_PLATFORM_VARIANT" = "X" ]; then
-    SYS_PLATFORM_VARIANT="-api${ANDROIDAPI}"
-  fi
-  SYS_PREFIX="${SYS_PREFIXROOT}/${SYS_PLATFORM}${SYS_PLATFORM_VARIANT}"
+  SYS_PREFIX="${SYS_PREFIXROOT}/${SYS_PLATFORM}"
   #--------
   # register custom compiler/linker options
   payload_spcaps=`echo $SYS_PLATFORM | tr 'a-z' 'A-Z'`
@@ -984,6 +982,9 @@ make_setup_target()
   . $setup_target
   if [ ! "X$SYS_CPU" = "X" ]; then
     SYS_PREFIX="$SYS_PREFIXROOT/$SYS_PLATFORM/$SYS_CPU"
+  fi
+  if [ ! "X$SYS_PLATFORM_VARIANT" = "X" ]; then
+    SYS_PREFIX="$SYS_PREFIX${SYS_PLATFORM_VARIANT}"
   fi
   apptgtdir=$SYS_PREFIX/${SYS_APPNAME}${SYS_APPFIX}
   mkdir -p $SYS_PREFIX/bin
@@ -1025,6 +1026,7 @@ make_setup_target()
   ac_subst SYS_HOSTPREFIX
   ac_subst SYS_GSC
   ac_subst SYS_CC
+  ac_subst SYS_CXX
   ac_subst SYS_AR
   ac_subst SYS_RANLIB
   ac_subst SYS_STRIP
@@ -1038,7 +1040,6 @@ make_setup_target()
   ac_subst IF_ANDROIDAPI_GT_22 "`if [ $SYS_ANDROIDAPI -lt 23 ]; then echo '/* IF_ANDROIDAPI_GT_22 commented out:'; else echo '/* IF_ANDROIDAPI_GT_22 active here:*/'; fi`"
   ac_subst SYS_ANDROIDSDK
   ac_subst SYS_ANDROIDNDK
-  ac_subst SYS_ANDROIDARCH
   ac_subst SYS_BUILDHASH
   ac_subst SYS_BUILDEPOCH
   ac_subst SYS_PROFILE
@@ -1096,8 +1097,9 @@ make_clean()
 {
   echo "==> cleaning up build files.."
   rmifexists $SYS_PREFIX/lib/libpayload.a
+  rmifexists "$SYS_PREFIXROOT/$SYS_PLATFORM/*/lib/libpayload.a"
   rmifexists $SYS_PREFIX/build
-  rmifexists $SYS_PREFIXROOT/$SYS_PLATFORM/*/build
+  rmifexists "$SYS_PREFIXROOT/$SYS_PLATFORM/*/build"
 }
 
 make_scrub()
@@ -1641,6 +1643,24 @@ if [ ! "X$cfg_version" = "X$cur_version" ]; then
   echo " ** FRAMEWORK VERSION CHANGE - please rerun configure for the local host"
   SYS_PATH="$SYS_PATH" ./configure $SYS_APPNAME > /dev/null
   exit 1
+fi
+
+# check if android configuration has changed since last use
+if [ $SYS_PLATFORM = android ]; then
+  if [ -f $SYS_TMPDIR/config_android.cache ]; then
+    . $SYS_TMPDIR/config_android.cache
+    if [ ! "X$SYS_ANDROIDNDK" = "X$ANDROID_NDK" ]; then
+      echo " **-----------------------------------------------------------------------**"
+      echo " ** NEW ANDROID CONFIGURATION DETECTED:"
+      echo "    The NDK changed from $ANDROID_NDK to $SYS_ANDROIDNDK" !
+      echo "    If you experience problems with linking, you'll need to clean and rebuild:"
+      echo "      /bin/rm -r $SYS_PREFIXROOT/$SYS_PLATFORM/arm${SYS_PLATFORM_VARIANT}"
+      echo "      /bin/rm -r $SYS_PREFIXROOT/$SYS_PLATFORM/arm64${SYS_PLATFORM_VARIANT}"
+      echo "      /bin/rm -r $SYS_PREFIXROOT/$SYS_PLATFORM/x86${SYS_PLATFORM_VARIANT}"
+      echo "      /bin/rm -r $SYS_PREFIXROOT/$SYS_PLATFORM/x86_64${SYS_PLATFORM_VARIANT}"
+      echo " **-----------------------------------------------------------------------**"
+    fi
+  fi
 fi
 
 # override the make argument

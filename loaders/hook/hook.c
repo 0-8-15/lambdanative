@@ -49,6 +49,14 @@ int main(int argc, char *argv[])
     #define FFI_EVENT_UNLOCK  ffi_event_lock=0;
   #endif
 #endif
+void ln_gambit_lock()
+{
+  FFI_EVENT_LOCK
+}
+void ln_gambit_unlock()
+{
+  FFI_EVENT_UNLOCK
+}
 void ffi_event(int t, int x, int y)
 {
   static int lambdanative_needsinit=1;

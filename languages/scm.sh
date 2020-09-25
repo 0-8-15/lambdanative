@@ -48,7 +48,7 @@ compile_payload_scm()
     # -------
     # prep the compiler options
     if [ $SYS_MODE = "debug" ]; then
-      scm_opts="(declare (block)(not safe)(standard-bindings)(extended-bindings)(debug)(debug-location))"
+      scm_opts="(declare (block)(standard-bindings)(extended-bindings)(debug)(debug-location)) (define-cond-expand-feature debug)"
     else
       scm_opts="(declare (block)(not safe)(standard-bindings)(extended-bindings))"
     fi
@@ -104,7 +104,7 @@ compile_payload_scm()
 	if [ -f $scm_hdr ]; then scm_hdr="-e '(load \"$scm_hdr\")'"; else scm_hdr=""; fi
 	gsc_processing=""
 	# if [ $SYS_VERBOSE ]; then gsc_processing="$gsc_processing -expansion"; fi
-        veval "$SYS_GSC -prelude \"$scm_opts\" -c -o $scm_ctgt $gsc_processing $scm_hdr $scm_src"
+        veval "$SYS_GSC -:~~tgtlib=${SYS_PREFIX}/lib -prelude \"$scm_opts\" -c -o $scm_ctgt $gsc_processing $scm_hdr $scm_src"
         if [ $veval_result != "0" ]; then rmifexists "$scm_ctgt"; fi
         assertfile "$scm_ctgt"
         rmifexists "$scm_otgt"

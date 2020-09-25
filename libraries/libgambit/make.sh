@@ -42,12 +42,17 @@ if [ -f $SYS_ROOT/targets/$SYS_PLATFORM/libgambc_enablesinglehost ]; then
   EXTRACONF="$EXTRACONF --enable-single-host"
 fi
 
+  EXTRACONF="$EXTRACONF --enable-single-host"
+
+EXTRACONF="$EXTRACONF --enable-poll"
+
 package_configure $EXTRACONF
 
 
 if [ "$SYS_PLATFORM" = "$SYS_HOSTPLATFORM" ]; then
   package_make
 else
+  echo 'exit 0' > gsc-boot && chmod +x gsc-boot
   cd lib
   package_make
   cd ..

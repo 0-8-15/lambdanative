@@ -27,6 +27,8 @@ ___END_C_LINKAGE
 ___setup_params_struct setup_params;
 int debug_settings = ___DEBUG_SETTINGS_INITIAL;
 
+void *ln_gambit_linker() { return LINKER; }
+
 void system_init();
 
 void lambdanative_payload_setup()

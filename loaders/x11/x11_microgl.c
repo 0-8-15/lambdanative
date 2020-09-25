@@ -119,6 +119,7 @@ int _microgl_key( XKeyEvent *event )
 {
   KeySym keysym;
   XLookupString( event, NULL, 0, &keysym, NULL );
+  // Control keys
   switch (keysym) {
     case XK_Delete:       return EVENT_KEYDELETE;
     case XK_Escape:       return EVENT_KEYESCAPE;
@@ -127,17 +128,37 @@ int _microgl_key( XKeyEvent *event )
     case XK_Return:       return EVENT_KEYENTER;
     case XK_Home:         return EVENT_KEYHOME;
     case XK_End:          return EVENT_KEYEND;
-    case XK_KP_Left:
     case XK_Left:         return EVENT_KEYLEFT;
-    case XK_KP_Right:
     case XK_Right:        return EVENT_KEYRIGHT;
-    case XK_KP_Down:
     case XK_Down:         return EVENT_KEYDOWN;
-    case XK_KP_Up:
     case XK_Up:           return EVENT_KEYUP;
   }
-  if( (keysym >= 0x0020 && keysym <= 0x007e) || 
-      (keysym >= 0x00a0 && keysym <= 0x00ff) ) return keysym;
+  // Printable chars (Latin 1)
+  if( (keysym >= 0x0020 && keysym <= 0x007e) || // Basic Latin 1 charset
+      (keysym >= 0x00a0 && keysym <= 0x00ff) )  // Extended Latin 1 charset
+    return keysym;
+  // Control keys - numeric keypad
+  switch (keysym) {
+    case XK_KP_Enter:     return EVENT_KEYENTER;
+    case XK_KP_Home:      return EVENT_KEYHOME;
+    case XK_KP_End:       return EVENT_KEYEND;
+    case XK_KP_Left:      return EVENT_KEYLEFT;
+    case XK_KP_Right:     return EVENT_KEYRIGHT;
+    case XK_KP_Down:      return EVENT_KEYDOWN;
+    case XK_KP_Up:        return EVENT_KEYUP;
+  }
+  // Printable chars - numeric keypad
+  switch (keysym) {
+    case XK_KP_Space:     return XK_space;
+    case XK_KP_Equal:     return XK_equal;
+    case XK_KP_Multiply:  return XK_asterisk;
+    case XK_KP_Add:       return XK_plus;
+    case XK_KP_Subtract:  return XK_minus;
+    case XK_KP_Decimal:   return XK_period;
+    case XK_KP_Divide:    return XK_slash;
+  }
+  if( keysym >= XK_KP_0 && keysym <= XK_KP_9 ) // Numeric keypad [0..9]
+    return (keysym - 0xff80);
   return 0;
 }
 
@@ -228,8 +249,13 @@ void microgl_pollevents(void)
         microgl_hook(EVENT_CLOSE,0,0); 
         return;
       case ConfigureNotify:
-        if( event.xconfigure.width != win.w || event.xconfigure.height != win.h )
-          XResizeWindow( Dpy, win.Win, win.w, win.h);
+        if( event.xconfigure.width != win.w || event.xconfigure.height != win.h ) {
+          // That's the wrong thing to do: XResizeWindow( Dpy, win.Win, win.w, win.h);
+          // Just this does not help either!
+          win.w = event.xconfigure.width;
+          win.h = event.xconfigure.height;
+          microgl_hook(EVENT_INIT, win.w, win.h);
+        }
         break;
       case SelectionClear:
         if (copiedString) free(copiedString);
@@ -319,10 +345,11 @@ int microgl_open(int w, int h, int fs)
 
       atom=XInternAtom(Dpy,"_NET_WM_STATE",True); 
       if (atom!=None) {
-        Atom NET_WMHints[1];
+        Atom NET_WMHints[2];
         NET_WMHints[0] = XInternAtom( Dpy, "_NET_WM_STATE_FULLSCREEN",True);
+        NET_WMHints[1] = XInternAtom( Dpy, "_NET_WM_STATE_ABOVE",True); // does not help
         XChangeProperty(Dpy,win.Win,atom, XA_ATOM, 32, 
-          PropModeReplace, (unsigned char*)&NET_WMHints, 1);
+          PropModeReplace, (unsigned char*)&NET_WMHints, 2);
         success=1;
       }
 
@@ -427,6 +454,11 @@ int microgl_open(int w, int h, int fs)
 
   XStoreName( Dpy, win.Win, SYS_APPNAME);
   XSetIconName( Dpy, win.Win, SYS_APPNAME);
+
+  XClassHint* classHint = XAllocClassHint();
+  classHint->res_name = SYS_APPNAME;
+  XSetClassHint( Dpy, win.Win, classHint);
+  XFree(classHint);
 
 // clear garbage fast?
   glViewport(0,0,w,h);
