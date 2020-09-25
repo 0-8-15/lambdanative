@@ -79,6 +79,7 @@ for platform in $platforms; do
     fi
   done
 done
+
 if [ ! "X"`echo "$2" | grep "android-"` = "X" ]; then
   ANDROIDAPI=`echo "$2" | cut -f 2 -d "-"`
   with_platform=`echo "$2" | cut -f 1 -d "-"`
@@ -155,6 +156,10 @@ if [ "X$with_mode" = "X" ]; then
   with_mode=normal
 fi
 SYS_MODE=$with_mode
+
+if [ ! "X$SYS_PLATFORM" = "Xandroid" ]; then
+  ANDROIDAPI=''
+fi
 
 if [ "X$ANDROIDAPI" = "X" ]; then
   echo "==> configured to build $SYS_APPNAME for $SYS_PLATFORM in $SYS_MODE ${SYS_VERBOSE}mode"
