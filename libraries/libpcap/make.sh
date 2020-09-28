@@ -7,6 +7,9 @@ if [ "$SYS_PLATFORM" = "win32" ]; then
   cp Lib/libwpcap.a $SYS_PREFIX/lib/libpcap.a
   cp Lib/libpacket.a $SYS_PREFIX/lib/
   cp -L -R Include/ $SYS_PREFIX/ #include/
+#=======
+#  cp -L -R Include/* $SYS_PREFIX/include/
+#>>>>>>> 83b1e83da39aeff28d366496357ec80d3385bcb2
   package_cleanup  
   cd $here
   continue # continues the libary building loop here
