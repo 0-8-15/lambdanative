@@ -316,12 +316,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                   (apply glgui:inputloop (append (list t x0 y0) gs)))))
           (if (fx= t EVENT_REDRAW)
               (wait-for-time-or-signal!)
-              (begin
-                (thread-sleep! step)
-                (reset-wait!)))))
+              (if frame-period-custom
+                  (thread-sleep! (frame-period-custom 1))
+                  (begin
+                    (thread-sleep! step)
+                    (reset-wait!))))))
     (set! glgui-wakeup! wakeup!)
     (set! glgui-timings-set! timings-set!)
     glgui-event))
+
+(define glgui-timings-at-10msec!
+  (let ((wait-for-10ms (lambda (_) (seconds->time (+ ##now 0.01)))))
+    (lambda ()
+      (glgui-timings-set! frame-period-custom: wait-for-10ms))))
 
 ;; provide a screen shot
 (define (glgui-screenshot)
