@@ -150,7 +150,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (string-mapconcat (reverse tmp) ": ")))
 
 (define (log:exception-handler e)
-  (set! exit (lambda x ((c-lambda (int) void "exit") (if (pair? x) (car x) 0))))
   (let ((le.orig log-error))
     (set!
      log-error
@@ -158,13 +157,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
        (apply println port: (current-error-port) s x)
        (apply le.orig s x))))
   (log-error "Thread \"" (thread-name (current-thread)) "\": " (exception->string e))
-  (when (deadlock-exception? e)
-    (log-error "HALT")
-    (exit))
-  ;;(log-trace (current-thread)) ;; Seems not to work at least for deadlock-exception?
-  (log-error "HALT")
-  ;; FIXME: this looks wrong
-  (exit))
+  (unless (deadlock-exception? e)
+    ;; gambit ___cleanup(); re-enters with a deadlock-exception here
+    ;; while printing the trace
+    (log-trace (current-thread)))
+  (log-error "HALT pid " ((c-lambda () int "getpid")))
+  (exit 70))
 
 ;; catch primordial thread exceptions
 (current-exception-handler log:exception-handler)
