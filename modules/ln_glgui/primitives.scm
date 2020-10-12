@@ -370,16 +370,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define (glgui:draw-text-center x y w h label fnt color . clipright)
   ;; looks like a case of "premature optimization is the root of all evil"
   (let* ((strw-raw (glgui:stringwidth label fnt)) ;; fixnum
-         ;; `strh` list instead of two values (top bottom) relative to baselind
+         ;; `strh` list instead of two values (top bottom) relative to baseline
          (strh (map flo (glgui:stringheight (string-append label "|") fnt)))
          (first-char-height (car strh))
          (second-char-height (cadr strh))
          (h-flo (flo h))
-         (y-flo (flo y)) ;; just used once (so far) for symetry
+         (y-flo (flo y)) ;; just used once (so far) for symmetry
          (centery ;; careful to have floating point only.
           ;;
           ;; This might be "premature optimization".  The contributes
-          ;; next to nothing to the cummulative time
+          ;; next to nothing to the cumulative time
           ;; `draw-text-center` needs.
           (fl+ y-flo
                (fl/ (if (fl> h-flo 0.)
