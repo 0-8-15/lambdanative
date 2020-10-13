@@ -554,7 +554,7 @@ end-of-c-declare
 
 (define (time-utc->time-monotonic! time-in)
   (if (not (eq? (srfi19:time-type time-in) time-utc))
-      (tm:time-error 'time-utc->time-montonic! 'incompatible-time-types time-in))
+      (tm:time-error 'time-utc->time-monotonic! 'incompatible-time-types time-in))
   (let ((ntime (tm:time-utc->time-tai! time-in time-in
 				       'time-utc->time-monotonic!)))
     (srfi19:time-type-set! ntime time-monotonic)
@@ -1516,7 +1516,7 @@ end-of-c-declare
 
 (define (string->seconds str fmt . tz0)
   (if (pair? tz0)
-      (string->seconds~ str (ln:tildify fmt) tz0)
+      (string->seconds~ str (ln:tildify fmt) (car tz0))
       (string->seconds~ str (ln:tildify fmt))))
 
 (define (seconds->string~ sec0 fmt tz)
