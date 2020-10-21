@@ -150,6 +150,7 @@ static void find_directories()
 #endif
 #if defined(ANDROID)
 // we put files on the sdcard, that's the only sane place (?)
+  extern char* android_getFilesDir();
   char path[1024];
 #if 0
   sprintf(path,"/sdcard/%s", SYS_APPNAME);
