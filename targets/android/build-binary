@@ -155,6 +155,10 @@ for m in $modules; do
     test -d $tmpdir/res/xml/ || mkdir -p $tmpdir/res/xml/
     cp $modpath/xml/*.xml $tmpdir/res/xml/
   fi
+  if [ -d $modpath/android_jars ]; then
+    test -d $tmpdir/libs || mkdir -p $tmpdir/libs
+    cp $modpath/android_jars/*.jar $tmpdir/libs
+  fi
 done
 
 if [ -f $ANDROIDSDK/extras/android/m2repository/com/android/support/support-v4/19.1.0/support-v4-19.1.0.jar ]; then
