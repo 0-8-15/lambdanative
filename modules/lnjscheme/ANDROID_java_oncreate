@@ -1,0 +1,93 @@
+/*-*-java-*-*/
+
+LNjSchemeSession = new LNjScheme.Scheme
+    (new String[0])
+    {
+        public Object trigger_redraw() {
+            mGLView.onPause();
+            mGLView.onResume();
+            return null;
+        }
+
+        String TAG = "calculator";
+
+        public void ln_log(String msg) {
+            String m = ln_log_date_formatter.format(new java.util.Date()) + msg;
+            System.err.println(TAG + ": " + m);
+            Log.d(TAG, m);
+        }
+    };
+
+LNjSchemeEvaluate
+    (LNjScheme.Scheme.cons
+     (LNjScheme.Scheme.sym("define"),
+      LNjScheme.Scheme.list
+      (LNjScheme.Scheme.sym("ln-this"),
+       this
+       )));
+
+LNjSchemeEvaluate
+    (LNjScheme.Scheme.cons
+     (LNjScheme.Scheme.sym("define"),
+      LNjScheme.Scheme.list
+      (LNjScheme.Scheme.sym("ln-mglview"),
+       mGLView
+       )));
+
+LNjSchemeEvaluate
+    (LNjScheme.Scheme.cons
+     (LNjScheme.Scheme.sym("define"),
+      LNjScheme.Scheme.list
+      (LNjScheme.Scheme.sym("log-message"),
+       new LNMethod("log-message") {
+           public Object apply(LNjScheme.Scheme interpreter, Object args) {
+               String str = null;
+               if(args instanceof LNjScheme.Pair) {
+                   Object a1 = null;
+                   a1 = LNjScheme.Scheme.first(args);
+                   if(a1 instanceof String) { str = (String)a1; }
+                   else if(a1 instanceof char[]) { str = new String((char[])a1); }
+                   else { str = "log-message: message not convertible"; }
+               } else {
+                   str = "log-message: args not a list";
+               }
+               ln_log(str);
+               return null; // interpreter.eval(body, new Environment(parms, args, env));
+           }}
+       )));
+
+LNjSchemeEvaluate
+    (LNjScheme.Scheme.cons
+     (LNjScheme.Scheme.sym("define"),
+      LNjScheme.Scheme.list
+      (LNjScheme.Scheme.sym("trigger-redraw!"),
+       new LNMethod("trigger-redraw!") {
+           public Object apply(LNjScheme.Scheme interpreter, Object args) {
+               mGLView.onPause();
+               mGLView.onResume();
+               return null;
+           }}
+       )));
+
+LNjSchemeEvaluate
+    (LNjScheme.Scheme.cons
+     (LNjScheme.Scheme.sym("define"),
+      LNjScheme.Scheme.list
+      (LNjScheme.Scheme.sym("redraw-view!"),
+       new LNMethod("redraw-view!") {
+           public Object apply(LNjScheme.Scheme interpreter, Object args) {
+               /*
+               if(args instanceof LNjScheme.Pair) {
+                   Object a1 = null;
+                   a1 = LNjScheme.Scheme.first(args);
+                   if(a1 instanceof android.app.Activity) {
+                       android.app.Activity obj = (android.app.Activity)a1;
+                       obj.onPause();
+                       obj.onResume();
+                   }
+               }
+               //*/
+               LNtriggerRedraw();
+               return null;
+           }}
+       )));

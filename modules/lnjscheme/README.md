@@ -4,7 +4,7 @@ This directory contains an app to demo how to use LNjScheme from LN.
 
 LNjScheme allows to call any Java/Android method from
 lambdanative/gambit without additional JNI code.  Either directly or
-within tje UI thread (dispatched asynchronously via `runOnUiThread`).
+within the UI thread (dispatched asynchronously via `runOnUiThread`).
 
 ## Build
 

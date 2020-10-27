@@ -1,6 +1,10 @@
 (cond-expand
- (android (define android-app-class (c-lambda () char-string "___result=android_app_class();")))
- (else (define (android-app-class) "android-app-class")))
+ (android
+  (c-declare "extern const char* android_app_class();")
+  (define android-app-class (c-lambda () char-string "android_app_class")))
+ (else (define (android-app-class)
+         (log-error "android-app-class: called in non-Android context")
+         "android-app-class")))
 
 (define lnjscheme-eval
   ;; Not sure that we need a mutex here.  But what if the java side
