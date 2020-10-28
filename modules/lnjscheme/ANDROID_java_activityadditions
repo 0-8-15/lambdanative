@@ -105,22 +105,22 @@ public void LNjSchemeSend(String msg) {
         (new java.util.concurrent.Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    ln_log("invocation of " + this + " evaluating.");
+                    // ln_log("invocation of " + this + " evaluating.");
                     if(in.isEOF(expr)) throw new Exception("invalid input");
                     return LNjSchemeEvaluate(expr); }
             });
-    ln_log("Sending to UI: " + job + " for: " + expr);
+    // ln_log("Sending to UI: " + job + " for: " + expr);
     LNjSchemeJob = job;
     new Thread() {
         @Override
         public void run() {
-            ln_log("LNjScheme waiting for completion");
+            // ln_log("LNjScheme waiting for completion");
             try {
                 LNjSchemeJob.get();
             } catch (Exception e) { // InterruptedException java.util.concurrent.ExecutionException
                 // FIXME: Do something sensible here!
             }
-            ln_log("LNjScheme notifying result");
+            // ln_log("LNjScheme notifying result");
             nativeEvent(126,0,0);
         }
     }.start();
@@ -131,21 +131,21 @@ public String LNjSchemeResult() {
     try {
         Object result = LNjSchemeJob != null ? LNjSchemeJob.get() : null;
         LNjSchemeJob = null;
-        ln_log("got result from UI");
+        // ln_log("got result from UI");
         java.io.StringWriter buf = new java.io.StringWriter();
         java.io.PrintWriter port = new java.io.PrintWriter(buf);
         port.println("D");
         LNjScheme.SchemeUtils.write(result, port, true);
         return buf.toString();
     } catch (java.util.concurrent.ExecutionException e) {
-        ln_log("got error from call");
+        // ln_log("got error from call");
         java.io.StringWriter buf = new java.io.StringWriter();
         java.io.PrintWriter port = new java.io.PrintWriter(buf);
         port.println("E");
         LNjScheme.SchemeUtils.write(("" + e.getCause()).toCharArray(), port, true);
         return buf.toString();
     } catch (Exception e) {
-        ln_log("got exception from call");
+        // ln_log("got exception from call");
         java.io.StringWriter buf = new java.io.StringWriter();
         java.io.PrintWriter port = new java.io.PrintWriter(buf);
         port.println("E");
