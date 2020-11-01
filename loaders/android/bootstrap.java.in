@@ -1,3 +1,4 @@
+/* LN bootstrap -*- mode: java; c-basic-offset: 2; -*- */
 /*
 LambdaNative - a cross-platform Scheme framework
 Copyright (c) 2009-2013, University of British Columbia
@@ -134,6 +135,11 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
       if(current_ContentView instanceof android.opengl.GLSurfaceView) {
         ((android.opengl.GLSurfaceView)current_ContentView).onPause();
       }
+      android.view.ViewParent parent0 = view.getParent();
+      if(parent0 instanceof android.view.ViewGroup) {
+        android.view.ViewGroup parent = (android.view.ViewGroup) parent0;
+        if(parent!=null) { parent.removeView(current_ContentView); }
+      }
       current_ContentView = view;
       super.setContentView(current_ContentView);
       if(current_ContentView instanceof android.opengl.GLSurfaceView) {
@@ -144,6 +150,7 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    current_ContentView = null;
     super.onCreate(savedInstanceState);
     Thread.setDefaultUncaughtExceptionHandler(
       new Thread.UncaughtExceptionHandler() {
@@ -173,11 +180,12 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
 
     nativeInstanceInit(getApplicationContext().getPackageCodePath().toString(), getFilesDir().toString());
     // start EVENT_IDLE
-    if(idle_tmScheduleRate > 0) idle_tm.scheduleAtFixedRate(idle_task, 0, idle_tmScheduleRate);
     setContentView(mGLView); // MUST NOT run before nativeInstanceInit completed
+    if(idle_tmScheduleRate > 0) idle_tm.scheduleAtFixedRate(idle_task, 0, idle_tmScheduleRate);
   }
   @Override
   protected void onDestroy() {
+    setContentView(mGLView);
     @ANDROID_JAVA_ONDESTROY@
     nativeEvent(14,0,0); // EVENT_CLOSE
     nativeEvent(127,0,0); // EVENT_TERMINATE
@@ -189,19 +197,19 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   }
   @Override
   protected void onPause() {
-    super.onPause();
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONPAUSE@
-    if (!isFinishing()) {
+    if (!isFinishing() && current_ContentView==mGLView) {
       mGLView.onPause();
     }
+    super.onPause();
   }
   @Override
   protected void onResume() {
     super.onResume();
+    if(current_ContentView==mGLView) { mGLView.onResume(); }
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONRESUME@
-    mGLView.onResume();
   }
   @Override
   public void onAccuracyChanged(Sensor sensor, int accuracy) {
