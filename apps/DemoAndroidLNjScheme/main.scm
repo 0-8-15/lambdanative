@@ -12,25 +12,7 @@
   )
  (else))
 
-(define test-file-name "lnjstest.scm")
-(define test-path-name (string-append (system-directory) (system-pathseparator) test-file-name))
-
-(include "lnjscheme.scm")
-
-(define (exception-->printable exc)
-  (if (os-exception? exc)
-      (list 'OS-EXCEPTION (os-exception-procedure exc)
-	    (os-exception-arguments exc)
-	    (os-exception-code exc)
-	    (err-code->string (os-exception-code exc))
-	    (os-exception-message exc))
-      exc))
-
 (define (try-LNjScheme)
-  (cond-expand
-   (android
-    (define (evl expr) (force (lnjscheme-future expr))))
-   (else (define evl eval)))
   (define exprs '())
   (define (try-expr expr)
     (display "Input:\n")
@@ -39,10 +21,16 @@
     (with-exception-catcher
      (lambda (exn)
        (display "EXN: ")
-       (display (exception-->printable exn))
+       (call-with-output-string
+        (lambda (port)
+          (continuation-capture
+           (lambda (cont)
+             (display-exception-in-context exn cont)
+             (display-continuation-backtrace cont)))))
        (newline))
      (lambda ()
-       (let ((result (evl expr)))
+       (log-status "Los: " expr)
+       (let ((result (force (lnjscheme-future expr))))
          (display "Result: ")
          (write result)
          (newline)))))
@@ -52,7 +40,6 @@
   (thread-start!
    (make-thread
     (lambda ()
-      (try-expr `(define (android-app-class) ,(android-app-class)))
       (let ((fn test-path-name))
         (if (file-exists? fn) (set! exprs (call-with-input-file fn read-all)) (set! exprs (list "failed to find" fn)))
         (dbset
@@ -61,12 +48,22 @@
     'LNjScheme-worker))
   #f)
 
+
+(define test-file-name "lnjstest.scm")
+(define test-path-name (string-append (system-directory) (system-pathseparator) test-file-name))
+
 (define (make-uiforms)
   `(
     (main
     "LNjScheme"
     #f
     #f
+    (button
+     text "Try Webview" action
+     ,(lambda ()
+        (log-status "launch")
+        (webview-launch! "https://lambdanative.org" via: 'webview)
+        #f))
     (spacer)
     (label text ,(string-append "Push Button to load '" test-path-name "'"))
     (spacer)
@@ -111,9 +108,6 @@
    (##thread-heartbeat!)
    (thread-yield!)
    (cond
-    ;; EVENT #126: retrieve and dispatch LNjScheme result.
-    ;; TBD: move this out of the application into LN core.
-    ((eq? t 126) (LNjScheme-result))
     ((= t EVENT_KEYPRESS) (if (= x EVENT_KEYESCAPE) (terminate)))
     (else (glgui-event gui t x y))))
  ;; termination
