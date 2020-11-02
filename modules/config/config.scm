@@ -102,7 +102,7 @@ char* android_getFilesDir_info()
 {
  return android_getFilesDir_info_get();
 }
-extern char* android_getPackageRessourcePath();
+extern char* android_getPackageCodePath();
 EOF
 )
   (define (android-PackageCodePath) ((c-lambda () char-string "android_getPackageCodePath"))))

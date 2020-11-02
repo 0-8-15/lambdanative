@@ -1,6 +1,6 @@
 #|
 LambdaNative - a cross-platform Scheme framework
-Copyright (c) 2009-2013, University of British Columbia
+Copyright (c) 2009-2020, University of British Columbia
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or
@@ -75,7 +75,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (utf8string->list s) (map integer->utf8char (utf8string->unicode s)))
 
-(define (list->utf8string l) (apply string-append l))
+(define (list->utf8string lst)
+  (let* ((len (do ((i 0 (fx+ i (string-length (car lst))))
+                   (lst lst (cdr lst)))
+                  ((null? lst) i)))
+         (result (make-string len)))
+    (do ((lst lst (cdr lst))
+         (offset 0 (fx+ offset (string-length (car lst)))))
+        ((null? lst) result)
+       (do ((strlst (string->list (car lst)) (cdr strlst))
+            (offset2 offset (fx+ offset2 1)))
+           ((null? strlst) offset2)
+        (string-set! result offset2 (car strlst))))))
 
 (define (utf8substring s ofs len)
   (list->utf8string (sublist (utf8string->list s) ofs len)))
@@ -288,7 +299,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           (integer->char (bitwise-ior #x80 (bitwise-and #x3F c)))))
                  (else (log-error "unicode->utf8string: illegal format")))
            ))
-        (else (apply string-append (map unicode->utf8string src)))
+        (else (list->utf8string (map unicode->utf8string src)))
   ))
+
+;;u8vectors that need unicode conversion
+(define (u8vector->utf8string vec)
+  (unicode->utf8string (vector->list (u8vector->unicode-vector (subu8vector vec 0
+    (let loop ((i 0))
+      (if (or (fx= i (u8vector-length vec)) (fx= (u8vector-ref vec i) 0)) i
+      (loop (+ i 1)))
+    ))))))
 
 ;; eof

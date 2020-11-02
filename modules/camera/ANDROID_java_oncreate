@@ -1,0 +1,2 @@
+checkOrRequestPermission(android.Manifest.permission.CAMERA);
+//checkOrRequestPermission(android.Manifest.permission.RECORD_AUDIO);

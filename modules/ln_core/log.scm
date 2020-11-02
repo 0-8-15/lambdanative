@@ -1,6 +1,6 @@
 #|
 LambdaNative - a cross-platform Scheme framework
-Copyright (c) 2009-2013, University of British Columbia
+Copyright (c) 2009-2020, University of British Columbia
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or
@@ -150,17 +150,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (string-mapconcat (reverse tmp) ": ")))
 
 (define (log:exception-handler e)
-  (let ((le.orig log-error))
-    (set!
-     log-error
-     (lambda (s . x)
-       (apply println port: (current-error-port) s x)
-       (apply le.orig s x))))
   (log-error "Thread \"" (thread-name (current-thread)) "\": " (exception->string e))
-  (unless (deadlock-exception? e)
-    ;; gambit ___cleanup(); re-enters with a deadlock-exception here
-    ;; while printing the trace
-    (log-trace (current-thread)))
+  (cond-expand
+    (gambit-c (log-trace (current-thread)))
+    (else
+      (unless (deadlock-exception? e)
+        ;; gambit ___cleanup(); re-enters with a deadlock-exception here
+        ;; while printing the trace
+        (log-trace (current-thread)))
+    ))
   (log-error "HALT pid " ((c-lambda () int "getpid")))
   (exit 70))
 
@@ -180,10 +178,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (log-folder-cleanup)
 
 ;; let's say hello to ourselves
-(log-system "Application " (system-appname) " built " (system-builddatetime))
+(log-system "Application " (system-appname) " v"  (system-appversion) " built " (system-builddatetime))
 (log-system "Git hash " (system-buildhash))
-
-
-
 
 ;; eof

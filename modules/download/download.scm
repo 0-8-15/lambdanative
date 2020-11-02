@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define download:header #f)  ;;stores presence and type of header #f/200/300
 (define download:tempfile (string-append (system-directory) (system-pathseparator) "download.tmp"))
 (define download:size 0)
+(define download:datastep 0)
 
 ;; Helper function to split return string into header and body
 (define (download:split-headerbody str)
@@ -97,7 +98,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (tempfile download:tempfile)
          (fh (open-output-file (list path: tempfile append: #t))))
     (if download:header
-         (begin (write-subu8vector v 0 lv fh)  (close-output-port fh))
+         (begin (write-subu8vector v 0 lv fh) (set! download:datalen (+ download:datalen lv)) (close-output-port fh))
          (begin (download:data-append! v)
           ;;test for header presence
           (let* ((str (download:split-headerbody-vector  download:data))
@@ -111,7 +112,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (let* ((size-start (string-contains (car str) "Content-Length: "))
                         (size-rest (substring (car str) size-start (string-length (car str))))
                         (size-stop (string-contains size-rest "\n"))
-                        (size-only (string->number (substring size-rest 18 (- size-stop 1)))))
+                        (size-only (string->number (substring size-rest 16 (- size-stop 1)))))
                    (log-status "download:append: content length " size-only)
                    (set! download:size size-only)
                    (set! download:header 200)
@@ -167,6 +168,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (ret (httpsclient-open host)))
     (set! download:header #f)
     (set! download:size 0)
+    (set! download:datastep 0)
     (if (file-exists? download:tempfile) (delete-file download:tempfile))
     (if (> ret 0)
       (let* ((request (string-append "GET " path " HTTP/1.0\r\nHost: " host "\r\n\r\n"))
@@ -222,13 +224,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 )
               )
             ))
-           (let ((count (httpsclient-recv download:buf)))
-             ;; (if (or (string=? (system-platform) "android") (string=? (system-platform) "ios")) (thread-sleep! 0.001)) ;;allow GUI to refresh
-             (if (> count 0)
-               (if usebuffer
-                 (download:data-append-local! (subu8vector download:buf 0 count))
-                 (download:data-append! (subu8vector download:buf 0 count))))
-             (loop count))
+            (let ((count (httpsclient-recv download:buf)))
+              (if (or (string=? (system-platform) "android") (string=? (system-platform) "ios"))
+                (let ((step (fix (/ download:datalen 1000000))))
+                  (if (fx> step download:datastep) (begin
+                    (set! download:datastep step)
+                    (thread-sleep! 0.001)
+                  ))
+                )) ;;allow GUI to refresh on large files
+              (if (> count 0)
+                (if usebuffer
+                  (download:data-append-local! (subu8vector download:buf 0 count))
+                  (download:data-append! (subu8vector download:buf 0 count))
+                ))
+              (loop count))
           )
         )
       )
@@ -241,7 +250,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (let ((tmpsize (if (file-exists? download:tempfile) (file-size download:tempfile) 0.)))
     (if (file-exists? filepath)
       1.
-      (if (> download:size 0) (/ tmpsize download:size) 0.))
+      (if (> download:size 0) (/ (flo tmpsize) download:size) 0.))
   ))
 
 ;; eof
