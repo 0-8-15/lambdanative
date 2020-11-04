@@ -2,7 +2,7 @@
 
 ;; Try this to find out how where methods are defined:
 ;;
-(method "checkOrRequestPermission" (android-app-class) "java.lang.String")
+(procedure? (method "checkOrRequestPermission" (android-app-class) "java.lang.String"))
 
 ;; Just to see an error:
 ;;
