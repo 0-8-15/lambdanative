@@ -1,24 +1,26 @@
 (define (run-in-LNjScheme #!key (success values) (fail raise) #!rest body)
-  (cond-expand
-   (android (define (evl expr) (force (lnjscheme-future expr))))
-   (else (define evl eval)))
   (thread-start!
    (make-thread
     (lambda ()
       (for-each
        (lambda (expr)
-         (with-exception-catcher
-          (lambda (exn)
-            (log-error
-             (call-with-output-string
-              (lambda (port)
-                (display "EXN in\n" port)
-                (pretty-print expr port)
-                (display "EXN: " port)
-                (display-exception exn port)))))
-          (lambda ()
-            ;; (log-debug "jScheme EVAL:" 1 expr)
-            (call-with-values (lambda () (evl expr)) success))))
+         (cond-expand
+          (android
+           ;; (log-debug "jScheme EVAL:" 1 expr)
+           (call-with-lnjscheme-result
+            expr
+            (lambda (promise)
+              (with-exception-catcher
+               (lambda (exn)
+                 (log-error
+                  (call-with-output-string
+                   (lambda (port)
+                     (display "EXN in\n" port)
+                     (pretty-print expr port)
+                     (display "EXN: " port)
+                     (display-exception exn port)))))
+               (lambda () (success (force promise)))))))
+          (else #f)))
        body))
     'jscheme-worker))
   #t)
@@ -66,12 +68,12 @@
              (reload (new "android.widget.Button" this))
              (Button3 (new "android.widget.Button" this))
              )
-         (define (switch-back-to-ln! v)
+         (define (switch-back-to-glgui! v)
            (on-back-pressed back-pressed-h)
            (set! back-pressed-h #f)
            (setContentView this ln-mglview))
          (define (back-pressed)
-           (if (wv-can-go-back? wv) (wv-goBack! wv) (switch-back-to-ln! frame)))
+           (if (wv-can-go-back? wv) (wv-goBack! wv) (switch-back-to-glgui! frame)))
          ;; (webview! wv 'onpagecomplete (lambda (view url) (log-message "webview post visual state")))
          ;; (webview! wv 'onLoadResource (lambda (view url) (log-message (string-append "onLoadResource " url))))
          ;; (webview! wv 'onPageFinished (lambda (view url) (log-message (string-append "onPageFinished " url))))
@@ -90,7 +92,7 @@
          (arrange-in-order! navigation (list back reload Button3))
          (setText back (String "Back"))
          (setText reload (String "Reload"))
-         (onclick-set! this back switch-back-to-ln!)
+         (onclick-set! this back switch-back-to-glgui!)
          (onclick-set! this reload (lambda (v) ((method "reload" "android.webkit.WebView") wv)))
          (set-layout-vertical! frame)
          (set-layout-vertical! frame)
