@@ -53,6 +53,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     `(if (not ,test) (begin ,expr ,@rest))))
  (else))
 
+(include "../ln_core/ln_core-macros.scm")
+
+(declare
+ ;; we overwrite `assoc` while we change the font structure
+ (not standard-bindings assoc))
+
 (include "glgui_button.scm")
 (include "glgui_keypad_delete.scm")
 (include "glgui_keypad_return.scm")

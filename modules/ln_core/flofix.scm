@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define fix:fixnum-max-as-flonum (##fixnum->flonum ##max-fixnum))
 
+(##namespace ("lambdanative#" flo fix))
+
 (define (fix n)
   (declare (not safe))
   (cond
@@ -60,6 +62,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ;; Note that macro-fix and macro-flo are only visible within ln_core.scm,
 ;; but are much faster. fix and flo are available everywhere but costlier.
+(##namespace (""))
+
+(define flo lambdanative#flo)
+(define fix lambdanative#fix)
+
 (define-macro (macro-fix n)
   `(cond
     ((##fixnum? ,n) ,n)

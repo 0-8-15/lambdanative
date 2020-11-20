@@ -36,6 +36,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 
+(include "../ln_core/ln_core-macros.scm")
 (include "glcore-ffi.scm")
 (include "glcore.scm")
 (include "gltrace.scm")

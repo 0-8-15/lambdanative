@@ -352,7 +352,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (glgui:draw-text-left x y w h label fnt color)
   (let* ((strw (flo (glgui:stringwidth label fnt)))
-         (strh (map flo (glgui:stringheight (string-append label "|") fnt)))
+         (strh (map lambdanative#flo (glgui:stringheight (string-append label "|") fnt)))
          (centery (fl+ (flo y) (fl/ (if (fl> (flo h) 0.) (flo h) (fl- (car strh) (cadr strh))) 2.)
                        (fl- (fl/ (fl+ (car strh) (cadr strh)) 2.)))))
     (glgui:renderstring x centery
@@ -362,7 +362,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (let* ((strw0 (flo (glgui:stringwidth label0 fnt)))
          (label (if (fl> strw0 (flo w)) (glgui:stringclipleft w label0 fnt) label0))
          (strw (if (fl> strw0 (flo w)) (flo (glgui:stringwidth label fnt)) strw0))
-         (strh (map flo (glgui:stringheight (string-append label "|") fnt)))
+         (strh (map lambdanative#flo (glgui:stringheight (string-append label "|") fnt)))
          (centery (fl+ (flo y) (fl/ (if (fl> (flo h) 0.) (flo h) (fl- (car strh) (cadr strh))) 2.)
            (fl- (fl/ (fl+ (car strh) (cadr strh)) 2.)))))
     (glgui:renderstring (fl+ (flo x) (flo w) (fl- strw)) centery label fnt color)))
@@ -371,7 +371,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ;; looks like a case of "premature optimization is the root of all evil"
   (let* ((strw-raw (glgui:stringwidth label fnt)) ;; fixnum
          ;; `strh` list instead of two values (top bottom) relative to baseline
-         (strh (map flo (glgui:stringheight (string-append label "|") fnt)))
+         (strh (map lambdanative#flo (glgui:stringheight (string-append label "|") fnt)))
          (first-char-height (car strh))
          (second-char-height (cadr strh))
          (h-flo (flo h))
