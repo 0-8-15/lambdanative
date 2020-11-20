@@ -24,29 +24,19 @@ private Uri compatGetUriForFile(File f) {
 private void startCamera(String fnl_name, String tmp_name) {
   camera_fnl = fnl_name;
   camera_tmp = tmp_name;
-  if(checkOrRequestPermission(android.Manifest.permission.CAMERA)) {
-      Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-      //File f = new File(camera_tmp);
-      String tmp_name_without_dir = "_camera_tmp.jpg";
-      // File f = new File(getExternalFilesDir("camera"), tmp_name_without_dir);
-      //
-      // getExternalStorageDirectory is deprecated - I just failed to
-      // get anything else working.
-      // https://developer.android.com/reference/android/os/Environment.html#getExternalStorageDirectory()
-      File f = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES), tmp_name_without_dir);
-      camera_tmp = f.toString();
-      // ln_log("startCamera into: " + camera_tmp);
-      if (f != null) {
-          Uri out = compatGetUriForFile(f);
-          // Uri out = FileProvider.getUriForFile(getApplicationContext(), "@SYS_ORGDOMAIN_REVERSE_DOT@.fileprovider", f);
-          // ln_log("startCamera Uri: " + out);
-          intent.putExtra(MediaStore.EXTRA_OUTPUT, out);
-          intent.setClipData(ClipData.newRawUri("", out));
-          intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-          //    intent.putExtra(android.provider.MediaStore.EXTRA_SCREEN_ORIENTATION,ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-          startActivityForResult(intent, REQUEST_IMAGE_CAPTURE);
-      }
+  Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+  File f = new File(camera_tmp);
+  if (f != null) {
+    Uri imageUri = FileProvider.getUriForFile(this,
+            "@SYS_PACKAGE_DOT@.provider",
+            f);
+    intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+    if (@SYS_ANDROIDAPI@ <= 22) {
+      intent.setClipData(ClipData.newRawUri("", imageUri));
+      intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    }
+//    intent.putExtra(android.provider.MediaStore.EXTRA_SCREEN_ORIENTATION,ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    startActivityForResult(intent, REQUEST_IMAGE_CAPTURE);
   }
 }
 
@@ -57,15 +47,21 @@ private void startVidCamera(String fnl_name, String tmp_name, int maxlength) {
   vid_fnl = fnl_name;
   vid_tmp = tmp_name;
   if(checkOrRequestPermission(android.Manifest.permission.CAMERA)) {
-      Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-      File f = new File(vid_tmp);
-      if (f != null) {
-          intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(f));
-          intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-          if (maxlength > 0) {
-              intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, maxlength);
-          }
-          startActivityForResult(intent, REQUEST_VIDEO_CAPTURE);
+    Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+    File f = new File(vid_tmp);
+    if (f != null) {
+      Uri vidUri = FileProvider.getUriForFile(this,
+            "@SYS_PACKAGE_DOT@.provider",
+            f);
+      intent.putExtra(MediaStore.EXTRA_OUTPUT, vidUri);
+      if (@SYS_ANDROIDAPI@ <= 22) {
+        intent.setClipData(ClipData.newRawUri("", vidUri));
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
       }
+      if (maxlength > 0) {
+        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, maxlength);
+      }
+      startActivityForResult(intent, REQUEST_VIDEO_CAPTURE);
+    }
   }
 }

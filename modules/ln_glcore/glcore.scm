@@ -1,6 +1,6 @@
 #|
 LambdaNative - a cross-platform Scheme framework
-Copyright (c) 2009-2013, University of British Columbia
+Copyright (c) 2009-2020, University of British Columbia
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or
@@ -269,7 +269,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (glCoreTextureDraw x y w0 h0 t x1 y1 x2 y2 r . colors)
   (let ((entry (table-ref glCore:textures t #f)))
-    (if entry  
+    (if entry
         (let ((w (flo (if (fx= (fix w0) 0) (vector-ref entry 2) w0)))
               (h (flo (if (fx= (fix h0) 0) (vector-ref entry 3) h0))))
           (if (null? glcore:cliplist)
@@ -289,48 +289,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (glCore:TextureDrawUnClipped x y w h t @x1 @y1 @x2 @y2 r . colors)
   (glcore:log 5 "glCoreTextureDrawUnclipped enter")
-      (let ((w2 (fl/ w 2.)) (h2 (fl/ h 2.)))
-        (glPushMatrix)
-        (glTranslatef (fl+ x w2) (fl+ y h2) 0.)
-        (glRotatef r 0. 0. 1.)
-        (_glCoreTextureBind t)
-        (glCoreBegin GL_TRIANGLE_STRIP)
-        (if (null? colors) (begin
+  (let ((w2 (fl/ w 2.)) (h2 (fl/ h 2.)))
+    (glPushMatrix)
+    (glTranslatef (fl+ x w2) (fl+ y h2) 0.)
+    (glRotatef r 0. 0. 1.)
+    (_glCoreTextureBind t)
+    (glCoreBegin GL_TRIANGLE_STRIP)
+    (if (null? colors)
+        (begin
           (glCoreVertex2f (fl- w2) h2 @x1 @y2) 
           (glCoreVertex2f w2 h2 @x2 @y2) 
           (glCoreVertex2f (fl- w2) (fl- h2) @x1 @y1) 
           (glCoreVertex2f w2 (fl- h2) @x2 @y1) 
-        )(begin
-          (glCoreColor (car colors))
-          (glCoreVertex2f (fl- w2) h2 @x1 @y2) 
-          (glCoreColor (cadr colors))
-          (glCoreVertex2f w2 h2 @x2 @y2) 
-          (glCoreColor (caddr colors))
-          (glCoreVertex2f (fl- w2) (fl- h2) @x1 @y1) 
-          (glCoreColor (cadddr colors))
-          (glCoreVertex2f w2 (fl- h2) @x2 @y1) 
-        ))
-        (glCoreEnd)
-        (glPopMatrix)
-   )
+          )
+        (let ((colors (list->vector (car colors))))
+          (glCoreColor (vector-ref colors 0))
+          (glCoreVertex2f (fl- w2) h2 @x1 @y2)
+          (glCoreColor (vector-ref colors 1))
+          (glCoreVertex2f w2 h2 @x2 @y2)
+          (glCoreColor (vector-ref colors 2))
+          (glCoreVertex2f (fl- w2) (fl- h2) @x1 @y1)
+          (glCoreColor (vector-ref colors 3))
+          (glCoreVertex2f w2 (fl- h2) @x2 @y1)
+          ))
+    (glCoreEnd)
+    (glPopMatrix)
+    )
   (glcore:log 5 "glCoreTextureDrawUnclipped leave")
   )
 
 (define (glCore:TextureDrawClipped x y w h t @x1 @y1 @x2 @y2 r . colors)
   (if (and (fl< x glcore:clipx2) (fl> (fl+ x w) glcore:clipx1)
            (fl< y glcore:clipy2) (fl> (fl+ y h) glcore:clipy1))
-    (let* ((cx1 (flmax x glcore:clipx1))
-           (cx2 (flmin (fl+ x w) glcore:clipx2))
-           (cy1 (flmax y glcore:clipy1))
-           (cy2 (flmin (fl+ y h) glcore:clipy2))
-           (cw (fl- cx2 cx1))
-           (ch (fl- cy2 cy1))
-           (cw2 (fl/ cw 2.))
-           (ch2 (fl/ ch 2.))
-           (c@x1 (fl+ (fl* (fl/ (fl- cx1 x) w) (fl- @x2 @x1)) @x1))
-           (c@x2 (fl+ (fl* (fl/ (fl- cx2 x) w) (fl- @x2 @x1)) @x1))
-           (c@y1 (fl+ (fl* (fl/ (fl- cy1 y) h) (fl- @y2 @y1)) @y1))
-           (c@y2 (fl+ (fl* (fl/ (fl- cy2 y) h) (fl- @y2 @y1)) @y1)))
+      (let* ((cx1 (flmax x glcore:clipx1))
+             (cx2 (flmin (fl+ x w) glcore:clipx2))
+             (cy1 (flmax y glcore:clipy1))
+             (cy2 (flmin (fl+ y h) glcore:clipy2))
+             (cw (fl- cx2 cx1))
+             (ch (fl- cy2 cy1))
+             (cw2 (fl/ cw 2.))
+             (ch2 (fl/ ch 2.))
+             (c@x1 (fl+ (fl* (fl/ (fl- cx1 x) w) (fl- @x2 @x1)) @x1))
+             (c@x2 (fl+ (fl* (fl/ (fl- cx2 x) w) (fl- @x2 @x1)) @x1))
+             (c@y1 (fl+ (fl* (fl/ (fl- cy1 y) h) (fl- @y2 @y1)) @y1))
+             (c@y2 (fl+ (fl* (fl/ (fl- cy2 y) h) (fl- @y2 @y1)) @y1)))
         (glPushMatrix)
         (glTranslatef (fl+ cx1 cw2) (fl+ cy1 ch2) 0.)
         (glRotatef r 0. 0. 1.)
@@ -343,7 +345,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (glCoreVertex2f (fl- cw2) (fl- ch2) c@x1 c@y1)
               (glCoreVertex2f cw2 (fl- ch2) c@x2 c@y1)
               )
-            (let ((colors (list->vector colors)))
+            (let ((colors (list->vector (car colors))))
               ;; TODO: color interpolation here!
               (glCoreColor (vector-ref colors 0))
               (glCoreVertex2f (fl- cw2) ch2 c@x1 c@y2)
@@ -356,7 +358,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               ))
         (glCoreEnd)
         (glPopMatrix)
-  )))
+        )))
 
 (define glCoreTextureGradientDraw glCoreTextureDraw)
 
@@ -367,8 +369,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (glcore:log 5 "glCoreTexturePolygonDraw")
   (let ((entry (table-ref glCore:textures t #f)))
     (if entry
-        (let* ((cx (flo _cx)) (cy (flo _cy))
-               (r (flo _r)))
+        (let* ((cx (flo _cx)) (cy (flo _cy)) (r (flo _r)))
           (glPushMatrix)
           (glTranslatef cx cy 0.)
           (glRotatef r 0. 0. 1.)
