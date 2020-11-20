@@ -94,6 +94,14 @@ end-of-c-declare
 ;; repl and simillar situations.
 (set! ##exit
       (lambda (#!optional (code 0))
+        #;(println port: (current-error-port)
+         (call-with-output-string
+          (lambda (port)
+            (continuation-capture
+             (lambda (cont)
+               (display-exception-in-context code cont port)
+               (display-continuation-backtrace cont port)))))
+         "##exit")
         ((c-lambda (int) void "lambdanative_exit") code)))
 
 (if (not (file-exists? (system-directory)))
