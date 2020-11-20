@@ -131,6 +131,7 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   @Override
   public void setContentView(android.view.View view) {
     if(current_ContentView != view) {
+      // Note: this is a bit brain dead as it ONLY handles GLSurfaceView
       if(current_ContentView instanceof android.opengl.GLSurfaceView) {
         ((android.opengl.GLSurfaceView)current_ContentView).onPause();
       }
