@@ -41,9 +41,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define (list-notempty? lst) (and (list? lst) (not (null? lst))))
 
 ;; Make a list of length n, where each element is set to elem
-(define (make-list n #!optional (elem 0))
-  (if (zero? n) '()
-      (cons elem (make-list (- n 1) elem))))
+(define (make-list n #!optional (fill 0))
+  (if (and (exact-integer? n) (not (negative? n)))
+      (do ((i n (fx- i 1)) (result '() (cons fill result)))
+          ((fx= i 0) result))
+      (error "make-list: The first argument must be a nonnegative integer: " n fill)))
 
 ;; mar 2010: changed implementation
 ;;(define (list-head l n)
