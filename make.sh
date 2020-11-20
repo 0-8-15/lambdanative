@@ -399,6 +399,20 @@ compile_payload()
   $SYS_RANLIB $tgtlib 2> /dev/null
   assertfile "$tgtlib"
   echo " == $tgtlib"
+  # transfering additonal .so's files
+  if [ "$SYS_PLATFORM" = android ]; then
+    sofilesdir=`locatedir apps/$SYS_APPNAME/android_sos silent`
+    if [ -d "$sofilesdir" ]; then
+      echo " => building additional library files.."
+      ## (cd $sofilesdir; make)
+      # cp -La $sofilesdir $tmpdir
+      env
+      ( export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI=$abi SYS_STRIP SYS_PLATFORM_VARIANT
+        cd $sofilesdir && make SYS_PREFIX=${SYS_PREFIX} INSTALL_DIR=$SYS_PREFIX/lib -r) || exit 1
+    else
+      echo "not building additional .so files"
+    fi
+  fi
   dmsg_make "payload : $tgtlib"
   dmsg_make "leaving compile_payload"
 }

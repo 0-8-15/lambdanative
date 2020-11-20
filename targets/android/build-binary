@@ -289,6 +289,12 @@ tmpmoddir=`mktemp -d $SYS_TMPDIR/tmp.XXXXXX`
 mkdir $tmpmoddir/libpayload
 cp loaders/android/Android.mk.module $tmpmoddir/libpayload/Android.mk
 
+dbg_inspect() {
+    echo Waiting in $1
+    export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI SYS_STRIP
+    (cd $1 && bash -i) || exit 1
+}
+
 # Loop over possible architectures and copy their precompiled files
 SYS_ANDROID_ABIs=`echo $SYS_ANDROID_ABIs | awk '{for (i=1;i<=NF;i++) if (!a[$i]++) printf("%s%s",$i,FS)}{printf("\n")}'`
 for abi in $SYS_ANDROID_ABIs; do
@@ -306,12 +312,35 @@ for abi in $SYS_ANDROID_ABIs; do
     arch=x86_64
   ;;
   esac
-  lib=$SYS_PREFIXROOT/android/${arch}${SYS_PLATFORM_VARIANT}/lib/libpayload.a
+  libdir=$SYS_PREFIXROOT/android/${arch}${SYS_PLATFORM_VARIANT}/lib
+  lib=$libdir/libpayload.a
   if [ -f $lib ]; then
     mkdir $tmpmoddir/libpayload/$abi
     cp $lib $tmpmoddir/libpayload/$abi
+    # transfering additonal .so's files
+    sofilesdir=`locatedir apps/$SYS_APPNAME/android_sos silent`
+    if [ "$sofilesdir" != "" ]; then
+      make -f $sofilesdir/Makefile install ARG_FROMDIR=$SYS_PREFIXROOT/android/${arch}${SYS_PLATFORM_VARIANT} ARG_INSTALL_DIR=$tmpmoddir/libpayload/$abi
+      # for i in $libdir/*.so; do
+      #   if file $i | grep -q executable; then
+      #     echo copying $i too
+      #     cp $i $tmpmoddir/libpayload/$abi;
+      #   fi;
+      # done
+    fi
+#    sofilesdir=`locatedir apps/$SYS_APPNAME/android_sos silent`
+#    if [ -d "$sofilesdir" ]; then
+#        echo " => building additional library files.."
+#        ## (cd $sofilesdir; make)
+#        cp -La $sofilesdir $tmpdir
+#        ( export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI=$abi SYS_STRIP SYS_PLATFORM_VARIANT
+#          cd $tmpdir/android_sos && make SYS_PREFIX=${SYS_PREFIXROOT}/android/${arch}${SYS_PLATFORM_VARIANT} INSTALL_DIR=$tmpmoddir/libpayload/$abi -r) || exit 1
+#        dbg_inspect $tmpdir/android_sos
+#    fi
   fi
 done
+
+#dbg_inspect `pwd`
 
 echo " => preparing JNI.."
 mkdir $tmpdir/jni
@@ -347,22 +376,19 @@ for lib in $payload_libs; do
   fi
 done
 
-dbg_inspect() {
-    echo Waiting in $1
-    export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI SYS_STRIP
-    (cd $1 && bash -i) || exit 1
-}
-
-# transfering additonal .so's files
-sofilesdir=`locatedir apps/$SYS_APPNAME/android_sos silent`
-if [ -d "$sofilesdir" ]; then
-  echo " => building additional library files.."
-  ## (cd $sofilesdir; make)
-  cp -La $sofilesdir $tmpdir
-  ( export SYS_ROOT SYS_PATH SYS_CXX SYS_PREFIX SYS_CC SYS_GSC APP_ABI SYS_STRIP
-    cd $tmpdir/android_sos && make -r) || exit 1
-  # dbg_inspect $tmpdir/android_sos
-fi
+(cd $tmpdir/libs/;
+ for dir in *; do
+   if [ -d $dir ] ; then
+     for i in $tmpmoddir/libpayload/$dir/*.so; do
+       if file $i | grep -q executable; then
+         echo copying $i too
+         cp $i $dir
+         chmod +x $dir/`basename $i`
+       fi;
+     done
+   fi
+ done
+)
 
 # manage hybrid apps
 if [ `has_module hybridapp` = yes ]; then
