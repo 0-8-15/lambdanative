@@ -1113,6 +1113,7 @@ make_setup_target()
   ac_subst SYS_APPVERSIONCODE
   ac_subst SYS_ANDROIDAPI
   ac_subst IF_ANDROIDAPI_GT_22 "`if [ $SYS_ANDROIDAPI -lt 23 ]; then echo '/* IF_ANDROIDAPI_GT_22 commented out:'; else echo '/* IF_ANDROIDAPI_GT_22 active here:*/'; fi`"
+  ac_subst IF_ANDROIDAPI_GT_25 "`if [ $SYS_ANDROIDAPI -lt 26 ]; then echo '/* IF_ANDROIDAPI_GT_25 commented out:'; else echo '/* IF_ANDROIDAPI_GT_25 active here:*/'; fi`"
   ac_subst SYS_ANDROIDSDK
   ac_subst SYS_ANDROIDNDK
   ac_subst SYS_BUILDHASH
