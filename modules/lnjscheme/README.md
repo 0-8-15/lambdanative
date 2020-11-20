@@ -4,31 +4,11 @@ This directory contains an app to demo how to use LNjScheme from LN.
 
 LNjScheme allows to call any Java/Android method from
 lambdanative/gambit without additional JNI code.  Either directly or
-within tje UI thread (dispatched asynchronously via `runOnUiThread`).
+within the UI thread (dispatched asynchronously via `runOnUiThread`).
 
 ## Build
 
-1. call `make -f Makefile` in this directory to create `android_jars/LNjScheme.jar`.
-2. use lambdanative make to create the demo app.
-
-## Toy With It
-
-To the user, the interesting file is `lnjstest.scm`.  It contains user
-defined code to be run.
-
-- An example file `lnjstest.scm` is embedded.  Modify it to suit your
-  likings.
-- use `adb push lnjstest.scm /scdard/DemoAndroidLNjScheme/` to install
-- push the button *Load it!* to execute it from the demo app.
-
-The (initial) example `lnjstest.scm` replaces the content of the app
-with a `LinearLayout` containing a (scaled, since I did not find out
-how to resize it) view of the content followed by a greating, a `Back`
-button and a WebView displaying `lambdanative.org`.  Push the button
-to return to the previews view.
-
-NB: Garbage in `lnjstest.scm` will likely break the app.  Use Androids
-App Settings for *force terminate* then.
+call `make -f Makefile` in this directory to create `android_jars/LNjScheme.jar`.
 
 # History
 
@@ -60,21 +40,6 @@ LNjScheme and added Makefile.
 5. Copied glue code from experimental branch and rename identifiers.
 
 # Issues
-
-## Split Into Module and Demo App
-
-The LNjScheme core stuff would better be a reusable module as it might
-simplify the build script dance around e.g. `hybridapp`s.
-Issues/missing:
-1. how to compile the `.jar` during build
-2. install the `.jar`
-3. handle the EVENT_LNjSchemeRETURN (i.e. #126) in core (see
-   `main.scm` around line 127).
-4. discover why exactly `##thread-heartbeat` of `gambit` fame was
-   disabled and clean up such that Gambit threads still work as
-   naively expected.  (Maybe this solve the performance issue
-   observed.)
-
 
 ## Numbers
 
