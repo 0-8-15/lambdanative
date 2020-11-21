@@ -173,8 +173,8 @@ end-of-c-declare
 (cond-expand
  (android
   (log-system "Examining Android...")
-  (c-declare "extern char* android_getFilesDir_info();")
-  (log-system "System APP dir: " ((c-lambda () char-string "___return(android_getFilesDir_info());")))
+  (c-declare "extern char* android_getFilesDir();")
+  (log-system "System APP dir: " ((c-lambda () char-string "___return(android_getFilesDir());")))
   (log-system "Done with Android checks"))
  (else #!void))
 (log-system "System app directory " (system-appdirectory))
