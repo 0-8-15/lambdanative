@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;; mapS behaves like map, except for stripping empty lists from the returned list
 ;; Usage: (maps FunctionToBeCalledForEachElement ListToWorkOn)
 (define (maps fcn lst)
+  ;;; FIXME: O(2^horror)
   (list-keep (map fcn lst) (lambda (l) (not (and (list? l) (= (length l) 0))))))
 
 ;; do a continuous lookup
@@ -104,7 +105,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (list-delete-item lst item)
   (cond
-    ((fx= (length lst) 0) lst)
+    ((null? lst) lst)
     ((equal? item (car lst)) (cdr lst))
     (else (cons (car lst) (list-delete-item (cdr lst) item)))
   )

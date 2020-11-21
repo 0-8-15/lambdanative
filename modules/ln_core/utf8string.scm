@@ -102,10 +102,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (utf8string-remove-char str chr)
   (let ((utf8chr (char->utf8char chr)))
-    (let loop ((ret (list)) (lst (utf8string->list str)))
-      (if (not (pair? lst)) (list->utf8string ret)
-        (loop (if (utf8char=? (car lst) utf8chr) ret (append ret (list (car lst))))  (cdr lst))
-      ))))
+    (let loop ((ret (list))
+               (lst (utf8string->list str)))
+      (if (not (pair? lst))
+          (list->utf8string ret)
+          (loop
+           (if (utf8char=? (car lst) utf8chr) ret (append ret (list (car lst))))
+           (cdr lst))))))
 
 (define utf8string-upcase! string-upcase!)
 (define utf8string-upcase string-upcase)
@@ -118,23 +121,42 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define utf8string-explode (lambda (str seplst)
   (let ((utf8seplst (map char->utf8char seplst)))
-    (let loop ((strlst (utf8string->list str))(tmp "")(res '()))
-      (if (= (length strlst) 0) (append res
-        (if (> (utf8string-length tmp) 0) (list tmp) '()))
+    (let loop ((strlst (utf8string->list str))
+               (tmp "")
+               (res '()))
+      (if (null? strlst)
+          (append
+           res
+           (if (> (utf8string-length tmp) 0)
+               (list tmp)
+               '()))
         (let ((chop? (member (car strlst) utf8seplst)))
-          (loop (cdr strlst) (if chop? "" (utf8string-append tmp (utf8string (car strlst))))
-            (if chop? (append res (list tmp)
-               (list (utf8string (car strlst)))) res))))))))
+          (loop
+           (cdr strlst)
+           (if chop? "" (utf8string-append tmp (utf8string (car strlst))))
+           (if chop?
+               (append
+                res
+                (list tmp)
+                (list (utf8string (car strlst))))
+               res))))))))
 
 (define (utf8string-split str sep)
   (let ((utf8sep (char->utf8char sep)))
-    (let loop ((cs (utf8string->list str))(subres "")(res '()))
-      (if (= (length cs) 0) (if (> (utf8string-length subres) 0)
-        (append res (list subres)) res)
-        (let* ((c (car cs))
-               (split? (utf8char=? c utf8sep)))
-          (loop (cdr cs) (if split? "" (utf8string-append subres c))
-            (if split? (append res (list subres)) res)))))))
+    (let loop ((cs (utf8string->list str))
+               (subres "")
+               (res '()))
+      (if (null? cs)
+          (if (> (utf8string-length subres) 0)
+              (append res (list subres)) res)
+          (let* ((c (car cs))
+                 (split? (utf8char=? c utf8sep)))
+            (loop
+             (cdr cs)
+             (if split? "" (utf8string-append subres c))
+             (if split?
+                 (append res (list subres))
+                 res)))))))
 
 (define (utf8string-index str a-char cmp)
   (let ((utf8a-char (char->utf8char a-char)))
@@ -173,26 +195,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define (utf8string-replace-char str oldchr newchr)
   (let ((utf8oldchr (char->utf8char oldchr))
         (utf8newchr (char->utf8char newchr)))
-    (let loop ((oldcs (utf8string->list str))(newcs '()))
-      (if (= (length oldcs) 0) (list->utf8string newcs)
-        (loop (cdr oldcs) (append newcs
-          (list (if (utf8char=? (car oldcs) utf8oldchr) utf8newchr (car oldcs)))))))))
+    (let loop ((oldcs (utf8string->list str)) (newcs '()))
+      (if (null? oldcs) (list->utf8string newcs)
+          (loop
+           (cdr oldcs)
+           (append
+            newcs
+            (list (if (utf8char=? (car oldcs) utf8oldchr) utf8newchr (car oldcs)))))))))
 
 (define utf8string-replace-substring string-replace-substring)
 
 (define (utf8string-split-into-two str)
   (set! str (utf8string-trim str))
   (if (fx= (utf8string-length str) 0)
-    (list "" "")
-    (let loop ((first (utf8string-split str #\space)) (second (list)) (bestw (utf8string-length str)))
-      (let* ((moveindex (- (length first) 1))
-             (newfirst (list-head first moveindex))
-             (newsecond (append (list (list-ref first moveindex)) second))
-             (neww (max (utf8string-length (utf8string-mapconcat newfirst " "))
-               (utf8string-length (utf8string-mapconcat newsecond " ")))))
-        (if (< neww bestw)
-          (loop newfirst newsecond neww)
-          (list (utf8string-mapconcat first " ") (utf8string-mapconcat second " ")))))))
+      (list "" "")
+      (let loop ((first (utf8string-split str #\space))
+                 (second (list))
+                 (bestw (utf8string-length str)))
+        (let* ((moveindex (- (length first) 1)) ;; FIXME, TBD: replace!
+               (newfirst (list-head first moveindex))
+               (newsecond (append (list (list-ref first moveindex)) second))
+               (neww (max (utf8string-length (utf8string-mapconcat newfirst " "))
+                          (utf8string-length (utf8string-mapconcat newsecond " ")))))
+          (if (< neww bestw)
+              (loop newfirst newsecond neww)
+              (list
+               (utf8string-mapconcat first " ")
+               (utf8string-mapconcat second " ")))))))
 
 ;; -------------------------------
 ;; unicode<->utf8 translation
