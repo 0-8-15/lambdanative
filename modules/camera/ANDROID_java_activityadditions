@@ -1,4 +1,3 @@
-/* -*-java-*- */
 
 private String camera_tmp;
 private String camera_fnl;
@@ -8,18 +7,6 @@ private String vid_fnl;
 
 static final int REQUEST_IMAGE_CAPTURE = 76781;
 static final int REQUEST_VIDEO_CAPTURE = 76782;
-
-private Uri compatGetUriForFile(File f) {
-  boolean x = false;
-  boolean y = true;
-  Uri result = null;
-  @IF_ANDROIDAPI_GT_22@
-  result = FileProvider.getUriForFile(getApplicationContext(), "@SYS_PACKAGE_DOT@.camerafileprovider", f);
-  x = true;
-  // end: IF_ANDROIDAPI_GT_22 */
-  if( !x && y ) result = Uri.fromFile(f);
-  return result;
-}
 
 private void startCamera(String fnl_name, String tmp_name) {
   camera_fnl = fnl_name;
@@ -40,28 +27,23 @@ private void startCamera(String fnl_name, String tmp_name) {
   }
 }
 
-
-// FIXME: Use fileprovider here too!
-
 private void startVidCamera(String fnl_name, String tmp_name, int maxlength) {
   vid_fnl = fnl_name;
   vid_tmp = tmp_name;
-  if(checkOrRequestPermission(android.Manifest.permission.CAMERA)) {
-    Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-    File f = new File(vid_tmp);
-    if (f != null) {
-      Uri vidUri = FileProvider.getUriForFile(this,
+  Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+  File f = new File(vid_tmp);
+  if (f != null) {
+    Uri vidUri = FileProvider.getUriForFile(this,
             "@SYS_PACKAGE_DOT@.provider",
             f);
-      intent.putExtra(MediaStore.EXTRA_OUTPUT, vidUri);
-      if (@SYS_ANDROIDAPI@ <= 22) {
-        intent.setClipData(ClipData.newRawUri("", vidUri));
-        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
-      }
-      if (maxlength > 0) {
-        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, maxlength);
-      }
-      startActivityForResult(intent, REQUEST_VIDEO_CAPTURE);
+    intent.putExtra(MediaStore.EXTRA_OUTPUT, vidUri);
+    if (@SYS_ANDROIDAPI@ <= 22) {
+      intent.setClipData(ClipData.newRawUri("", vidUri));
+      intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
     }
+    if (maxlength > 0) {
+      intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, maxlength);
+    }
+    startActivityForResult(intent, REQUEST_VIDEO_CAPTURE);
   }
 }
