@@ -117,7 +117,9 @@ end-of-c-declare
 
 (cond-expand
  (android
-  (define (android-PackageCodePath) ((c-lambda () char-string "android_getPackageCodePath"))))
+  (define android-FilesDir (c-lambda () char-string "android_getFilesDir"))
+  (set! system-appdirectory android-FilesDir)
+  (define android-PackageCodePath (c-lambda () char-string "android_getPackageCodePath")))
  (else #!void))
 
 ;; Gain access to Android app_directory_files and app_code_path
