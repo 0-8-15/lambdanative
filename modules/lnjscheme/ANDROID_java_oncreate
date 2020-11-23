@@ -1,7 +1,5 @@
 /* LNjScheme -*- mode: java; c-basic-offset: 2; -*- */
 
-if(LNjSchemeSession==null) { // closed at end of file
-
 LNjSchemeSession = new LNjScheme.Scheme
   (new String[0])
   {
@@ -126,7 +124,5 @@ LNjSchemeEvaluateNoSync
          }
        }}
      )));
-
-}
 
 // eof: LNjScheme
