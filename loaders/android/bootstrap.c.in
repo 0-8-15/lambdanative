@@ -115,7 +115,7 @@ JNIEnv* GetJNIEnv(){
   if(s_vm) {
     // some say that despite AttachCurrentThread being a no-op, one
     // may save overhead when checking first via GetEnv, so we do.
-    error = (*s_vm)->GetEnv(s_vm, &env, LAMBDANATIVE_JNI_VERSION);
+    error = (*s_vm)->GetEnv(s_vm, (void**)&env, LAMBDANATIVE_JNI_VERSION);
     if(error==JNI_EDETACHED) {
       error=(*s_vm)->AttachCurrentThreadAsDaemon(s_vm, &env, NULL);
     }
