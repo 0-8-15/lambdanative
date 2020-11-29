@@ -1,6 +1,6 @@
 #|
 LambdaNative - a cross-platform Scheme framework
-Copyright (c) 2009-2016, University of British Columbia
+Copyright (c) 2009-2020, University of British Columbia
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or
@@ -149,9 +149,11 @@ end-of-c-declare
 (define (event-push t x y)
   (set! event:fifo (append event:fifo (list (list t x y)))))
 (define (event-pop)
-  (if (null? event:fifo) #f
+  (if (null? event:fifo)
+      #f
       (let ((ret (car event:fifo)))
-        (set! event:fifo (cdr event:fifo)) ret)))
+        (set! event:fifo (cdr event:fifo))
+        ret)))
 
 (define on-jscm-result
   (let ((mux (make-mutex 'on-jscm-result)))
@@ -200,8 +202,9 @@ end-of-c-declare
          ;; handle potential scaling (running stretched on a device)
          (hook:event t (if app:scale? (fix (* app:xscale x)) x)
                        (if app:scale? (fix (* app:yscale y)) y))
-         )
-      ((fx= t EVENT_JSCM_RESULT) ((on-jscm-result) t x y))
+      )
+      ((fx= t EVENT_JSCM_RESULT)
+       ((on-jscm-result) t x y))
       ((fx= t EVENT_INIT)
         ;; prevent multiple inits
         (if app:mustinit (begin

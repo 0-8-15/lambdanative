@@ -20,7 +20,7 @@ Jscheme version 1.4, the last version that I released (in April
 
 (NB: There is another thing going by the name Jscheme, which was
 extented by a community until 2006.  This version grew beyond the
-features, complexity and size which make the Pter Norvigs version
+features, complexity and size which make the Peter Norvigs version
 interesting as a strating point.)
 
 Jscheme 1.4 however lacks a few features, notably the ability supply
@@ -32,9 +32,7 @@ name.
 
 1. Baseline: unpacked the sources from `jscheme-source.jar` into
    subdirectory `LNjScheme`.
-2. Changed package name to
-
-LNjScheme and added Makefile.
+2. Changed package name to LNjScheme and added Makefile.
 3. Refined errors raised from application of Java methods.
 4. Pulled some code from the community version to support constructors with arguments.
 5. Copied glue code from experimental branch and rename identifiers.

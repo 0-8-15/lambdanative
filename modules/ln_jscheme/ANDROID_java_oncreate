@@ -1,11 +1,8 @@
 /* LNjScheme -*- mode: java; c-basic-offset: 2; -*- */
 
-if(LNjSchemeSession==null) { // closed at end of file
-
 LNjSchemeSession = new LNjScheme.Scheme
   (new String[0])
   {
-    String TAG = "calculator";
 
     public void ln_log(String msg) {
       String m = ln_log_date_formatter.format(new java.util.Date()) + msg;
@@ -126,7 +123,5 @@ LNjSchemeEvaluateNoSync
          }
        }}
      )));
-
-}
 
 // eof: LNjScheme
