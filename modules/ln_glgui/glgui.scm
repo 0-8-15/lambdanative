@@ -284,6 +284,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (step 0.05) ;; delay increase
         (consecutive-redraw-count 1)
         (customized-moment #f) ;; may be a procedure returning the wait time/moment
+        (wakeup-seen #f)
         (wait-mutex (make-mutex 'glgui-event))
         (wait-cv (make-condition-variable 'glgui-event)))
     (define (timings-set! #!key (frame-period-max #f) (frame-period-min #f) (frame-period-custom #f))
@@ -293,31 +294,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (if (or (not frame-period-custom) (procedure? frame-period-custom))
           (set! customized-moment frame-period-custom)))
     (define (wakeup!)
+      (set! wakeup-seen #t)
       (condition-variable-signal! wait-cv))
     (define (reset-wait!)
+      (set! wakeup-seen #f)
       (set! consecutive-redraw-count 1))
     (define (wait-for-time-or-signal!)
       ;; wait for delay or signal from other thread
-      (if (let ((moment (if customized-moment
-                            (customized-moment consecutive-redraw-count)
-                            (min frame-period-max-value (* consecutive-redraw-count step)))))
-              (mutex-unlock! wait-mutex wait-cv moment))
+      (if (if wakeup-seen
+              (begin
+                (mutex-unlock! wait-mutex)
+                #f)
+              (let ((moment (if customized-moment
+                                (customized-moment consecutive-redraw-count)
+                                (min frame-period-max-value (* consecutive-redraw-count step)))))
+                (if (and (number? moment) (> moment 0))
+                    (cond-expand
+                     (win32
+                      ;; Work around bug in gambit
+                      (begin (mutex-unlock! wait-mutex wait-cv moment) wakeup-seen))
+                     (else (mutex-unlock! wait-mutex wait-cv moment)))
+                    (begin (mutex-unlock! wait-mutex) #t))))
           (reset-wait!)
           (set! consecutive-redraw-count (fx+ consecutive-redraw-count 1))))
     (define (glgui-event guis t x0 y0)
       (if (and glgui:active app:width app:height)
           (let ((gs (if (list? guis) guis (list guis))))
             (if (fx= t EVENT_REDRAW)
-                (when (mutex-lock! wait-mutex 0)
-                  (apply glgui:render gs)
-                  (wait-for-time-or-signal!))
+                (if (mutex-lock! wait-mutex 0)
+                    (begin
+                      (set! wakeup-seen #f)
+                      (apply glgui:render gs)
+                      (wait-for-time-or-signal!))
+                    (begin
+                      (log-warning "ignoring EVENT_REDRAW while handling EVENT_REDRAW")
+                      (set! wakeup-seen #t)))
                 (begin
                   (reset-wait!)
                   (apply glgui:inputloop (append (list t x0 y0) gs)))))
           (if (fx= t EVENT_REDRAW)
               (wait-for-time-or-signal!)
               (if customized-moment
-                  (thread-sleep! (customized-moment 1))
+                  (let ((moment (customized-moment 1)))
+                    (when (and (number? moment) (> moment 0))
+                      (thread-sleep! moment)))
                   (begin
                     (thread-sleep! step)
                     (reset-wait!))))))
@@ -327,7 +347,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (glgui-timings-at-sec! sec)
   (define (wait-for-sec _) (seconds->time (+ ##now sec)))
-  (define (no-wait _) 0)
+  (define (no-wait _) #f)
   (cond-expand
    ((or android ios)
     ;; TBD: convey the time value to signaling code.

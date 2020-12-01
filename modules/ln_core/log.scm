@@ -141,6 +141,16 @@ end-of-c-declare
   (log-error "HALT pid " ((c-lambda () int "getpid")))
   (exit 70))
 
+(cond-expand
+ ((or linux debug)
+  (set!
+   log-error
+   (let ((log-error log-error))
+     (lambda args
+       (apply println port: (current-error-port) args)
+       (apply log-error args)))))
+ (else))
+
 ;; catch primordial thread exceptions
 (current-exception-handler log:exception-handler)
 
@@ -159,5 +169,14 @@ end-of-c-declare
 ;; let's say hello to ourselves
 (log-system "Application " (system-appname) " v"  (system-appversion) " built " (system-builddatetime))
 (log-system "Git hash " (system-buildhash))
+(log-system "System directory " (system-directory))
+(cond-expand
+ (android
+  (log-system "Examining Android...")
+  (c-declare "extern char* android_getFilesDir();")
+  (log-system "System APP dir: " ((c-lambda () char-string "___return(android_getFilesDir());")))
+  (log-system "Done with Android checks"))
+ (else #!void))
+(log-system "System app directory " (system-appdirectory))
 
 ;; eof

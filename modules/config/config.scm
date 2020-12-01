@@ -94,6 +94,14 @@ end-of-c-declare
 ;; repl and simillar situations.
 (set! ##exit
       (lambda (#!optional (code 0))
+        #;(println port: (current-error-port)
+         (call-with-output-string
+          (lambda (port)
+            (continuation-capture
+             (lambda (cont)
+               (display-exception-in-context code cont port)
+               (display-continuation-backtrace cont port)))))
+         "##exit")
         ((c-lambda (int) void "lambdanative_exit") code)))
 
 (if (not (file-exists? (system-directory)))
@@ -109,7 +117,9 @@ end-of-c-declare
 
 (cond-expand
  (android
-  (define (android-PackageCodePath) ((c-lambda () char-string "android_getPackageCodePath"))))
+  (define android-FilesDir (c-lambda () char-string "android_getFilesDir"))
+  (set! system-appdirectory android-FilesDir)
+  (define android-PackageCodePath (c-lambda () char-string "android_getPackageCodePath")))
  (else #!void))
 
 ;; Gain access to Android app_directory_files and app_code_path

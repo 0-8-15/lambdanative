@@ -77,7 +77,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * policies, either expressed or implied, of Nicolas P. Rougier.
  * ========================================================================= */
 
-// edited and reformated for lambdanative use 
+// edited and reformated for lambdanative use
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -330,7 +330,7 @@ static void texture_atlas_set_region( texture_atlas_t * self, const size_t x,
   size_t depth = self->depth;
   size_t charsize = sizeof(char);
   for( i=0; i<height; ++i ) {
-    memcpy( self->data+((y+i)*self->width + x ) * charsize * depth, 
+    memcpy( self->data+((y+i)*self->width + x ) * charsize * depth,
       data + (i*stride) * charsize, width * charsize * depth  );
   }
 }
@@ -642,7 +642,7 @@ static texture_font_t * texture_font_new( texture_atlas_t * atlas, const char * 
   if( self->underline_thickness < 1 ) {
       self->underline_thickness = 1.0;
   }
-  FT_Size_Metrics metrics = face->size->metrics; 
+  FT_Size_Metrics metrics = face->size->metrics;
   self->ascender = (metrics.ascender >> 6) / 100.0;
   self->descender = (metrics.descender >> 6) / 100.0;
   self->height = (metrics.height >> 6) / 100.0;
@@ -796,7 +796,7 @@ static size_t texture_font_load_glyphs( texture_font_t * self, const wchar_t * c
     glyph->t0       = y/(float)height;
     glyph->s1       = (x + glyph->width)/(float)width;
     glyph->t1       = (y + glyph->height)/(float)height;
-    FT_Load_Glyph( face, glyph_index, FT_LOAD_RENDER | FT_LOAD_NO_HINTING);
+    FT_Load_Glyph( face, glyph_index, FT_LOAD_RENDER | FT_LOAD_NO_HINTING); // needs `|` here for highlighting
     slot = face->glyph;
     glyph->advance_x = slot->advance.x/64.0;
     glyph->advance_y = slot->advance.y/64.0;
@@ -886,7 +886,7 @@ static void ln_atlas_compile_compressedtexture(unsigned char *data, int len)
 static void ln_atlas_compile_atlas(char *name, texture_atlas_t *a)
 {
   int i;
-  int w = a->width; 
+  int w = a->width;
   int h = a->height;
   int depth = a->depth;
   unsigned char *data = a->data;
@@ -990,7 +990,7 @@ static void ln_atlas_free()
   if (glyph_set) { free(glyph_set); glyph_set=0; }
 }
 
-static int ln_atlas_info(int idx) 
+static int ln_atlas_info(int idx)
 {
   int res=0;
   if (atlas) {
@@ -1001,7 +1001,7 @@ static int ln_atlas_info(int idx)
     }
   }
   return res;
-} 
+}
 
 static void ln_atlas_data(unsigned char *data)
 {
@@ -1022,7 +1022,7 @@ static int ln_glyph_fxinfo(int gidx, int idx)
       case 4: res = (int)glyph->offset_x; break;
       case 5: res = (int)glyph->offset_y; break;
     }
-  } 
+  }
   return res;
 }
 
@@ -1031,12 +1031,12 @@ static double ln_glyph_flinfo(int gidx, int idx)
   double res=0;
   if (font&&atlas) {
     texture_glyph_t *glyph = *(texture_glyph_t **) vector_get( font->glyphs, gidx);
-    switch (idx) { 
+    switch (idx) {
       case 1: res=(double)glyph->s0; break;
       case 2: res=(double)glyph->t1+.5/(double)atlas->height; break;
       case 3: res=(double)glyph->s1+.5/(double)atlas->width; break;
       case 4: res=(double)glyph->t0; break;
-      case 5: res=(double)glyph->advance_x; break; 
+      case 5: res=(double)glyph->advance_x; break;
     }
   }
   return res;
@@ -1054,7 +1054,7 @@ static int ln_font_height()
 #include FT_SFNT_NAMES_H
 
 static char *ln_font_name(char *fname)
-{ 
+{
   FT_Error error;
   FT_Library library=0;
   FT_Face    face=0;
@@ -1091,7 +1091,7 @@ end-of-c-declare
 
 (define ttf:atlas-make
    (c-lambda (char-string scheme-object scheme-object char-string) int
-     "___result=ln_atlas_make(___arg1, ___CAST(void*,___BODY_AS(___arg2,___tSUBTYPED)), 
+     "___result=ln_atlas_make(___arg1, ___CAST(void*,___BODY_AS(___arg2,___tSUBTYPED)),
                               ___CAST(void*,___BODY_AS(___arg3,___tSUBTYPED)), ___arg4);"))
 (define ttf:atlas-free (c-lambda () void "ln_atlas_free"))
 (define ttf:atlas-info (c-lambda (int) int "ln_atlas_info"))
@@ -1108,7 +1108,7 @@ end-of-c-declare
   (let* ((pointvector (s32vector-append (list->s32vector pointlist) (s32vector 0)))
          (glyphvector (s32vector-append (list->s32vector glyphlist) (s32vector 0)))
          (atlas (fx= (ttf:atlas-make fname pointvector glyphvector name) 0)))
-    (ttf:atlas-free) 
+    (ttf:atlas-free)
     atlas))
 
 
@@ -1116,10 +1116,26 @@ end-of-c-declare
 
 ;; returns a scheme font for runtime use
 (define (ttf->fnt fname pointsize . glyphlist)
+  (define (atlas-texture->font-desc atlas-texture glyphs)
+    (let loop ((n 1) (gs glyphs) (fnt '()))
+      (if (null? gs)
+          (let ((fnl (append
+                      (list (list 0 (list 0 (ttf:font-height) atlas-texture 0. 0. 0. 0.) 0 0 0)) fnt)))
+            (ttf:atlas-free) fnl)
+          (loop
+           (fx+ n 1)
+           (cdr gs)
+           (append
+            fnt (list
+                 (list (ttf:glyph-fxinfo n 1)
+                       (list (ttf:glyph-fxinfo n 2) (ttf:glyph-fxinfo n 3) atlas-texture
+                             (ttf:glyph-flinfo n 1) (ttf:glyph-flinfo n 2) (ttf:glyph-flinfo n 3)
+                             (ttf:glyph-flinfo n 4))
+                       (ttf:glyph-fxinfo n 4) (ttf:glyph-flinfo n 5) (ttf:glyph-fxinfo n 5))))))))
   (ttf:log 1 "ttf->fnt" fname " " pointsize " " glyphlist)
   (let* ((fntid  (equal?-hash (list fname pointsize glyphlist)))
          (cachedfnt (table-ref ttf:dyncache fntid #f)))
-    (if cachedfnt cachedfnt 
+    (if cachedfnt cachedfnt
       (let* ((glyphs (cond
                ((null? glyphlist) ttf:ascii)
                ((string? (car glyphlist)) (utf8string->unicode (car glyphlist)))
@@ -1130,18 +1146,11 @@ end-of-c-declare
              (atlas-height (if atlas (ttf:atlas-info 2) #f))
              (atlas-datalen (if atlas (ttf:atlas-info 3) #f))
              (atlas-data (if atlas (let ((v (make-u8vector atlas-datalen))) (ttf:atlas-data v) v) #f))
-             (atlas-texture (if atlas ((eval 'glCoreTextureCreate) atlas-width atlas-height atlas-data) #f)) 
+              ;;; TBD: eval required here???
+             (atlas-texture (if atlas ((eval 'glCoreTextureCreate) atlas-width atlas-height atlas-data) #f))
              (fnt (if atlas-texture
-               (let loop ((n 1)(gs glyphs)(fnt '()))
-                 (if (fx= (length gs) 0) (let ((fnl (append 
-                     (list (list 0 (list 0 (ttf:font-height) atlas-texture 0. 0. 0. 0.) 0 0 0)) fnt)))
-                     (ttf:atlas-free) fnl)
-                   (loop (fx+ n 1) (cdr gs) (append fnt (list 
-                     (list (ttf:glyph-fxinfo n 1) 
-                         (list (ttf:glyph-fxinfo n 2) (ttf:glyph-fxinfo n 3) atlas-texture
-                             (ttf:glyph-flinfo n 1) (ttf:glyph-flinfo n 2) (ttf:glyph-flinfo n 3) (ttf:glyph-flinfo n 4))
-                       (ttf:glyph-fxinfo n 4) (ttf:glyph-flinfo n 5) (ttf:glyph-fxinfo n 5)))))))
-               #f)))
+                      (atlas-texture->font-desc atlas-texture glyphs)
+                      #f)))
          (if fnt (table-set! ttf:dyncache fntid fnt))
          fnt))))
 
