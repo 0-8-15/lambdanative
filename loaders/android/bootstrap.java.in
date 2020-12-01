@@ -155,21 +155,22 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
 
   @Override
   public void setContentView(android.view.View view) {
-    if(current_ContentView != view) {
-      // Note: this is a bit brain dead as it ONLY handles GLSurfaceView
-      if(current_ContentView instanceof android.opengl.GLSurfaceView) {
-        ((android.opengl.GLSurfaceView)current_ContentView).onPause();
-      }
-      android.view.ViewParent parent0 = view.getParent();
-      if(parent0 instanceof android.view.ViewGroup) {
-        android.view.ViewGroup parent = (android.view.ViewGroup) parent0;
-        if(parent!=null) {
-          parent.removeView(current_ContentView);
-        }
-      }
-      current_ContentView = view;
+    if(current_ContentView instanceof android.opengl.GLSurfaceView) {
+      ((android.opengl.GLSurfaceView)current_ContentView).onPause();
     }
-    super.setContentView(current_ContentView);
+    android.view.ViewParent parent0 = view.getParent();
+    if(parent0 instanceof android.view.ViewGroup) {
+      android.view.ViewGroup parent = (android.view.ViewGroup) parent0;
+      if(parent!=null) {
+        parent.removeView(current_ContentView);
+      }
+    } else if(parent0 != null) {
+      System.err.println("setContentView view " + view + " has unhandled parent " + parent0);
+    } else {
+      current_ContentView = view;
+      super.setContentView(current_ContentView);
+    }
+    // TBD: chances are that other classes might need a resume call too.
     if(current_ContentView instanceof android.opengl.GLSurfaceView) {
       ((android.opengl.GLSurfaceView)current_ContentView).onResume();
     }
@@ -212,9 +213,6 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONCREATE@
 
-    // MUST NOT run before nativeInstanceInit completed
-    // and MUST NOT run before permission checks
-    setContentView(current_ContentView==null ? mGLView : current_ContentView);
     // start EVENT_IDLE
     if(idle_tmScheduleRate > 0) idle_tm.scheduleAtFixedRate(idle_task, 0, idle_tmScheduleRate);
   }
