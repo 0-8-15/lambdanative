@@ -37,9 +37,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 ;; Absolutely minimal OpenGL (ES) interface
 
-(define glcore:debuglevel 0)
-(define (glcore:log level . x)
-   (if (>= glcore:debuglevel level) (apply log-system (append (list "glcore: " x)))))
+;;* Compiletime
+
+#| ;; enable manually in source
+(define-cond-expand-feature profile)
+;;|#
+
+(cond-expand
+ (debug
+  (define glcore:debuglevel 0)
+  (define (glcore:log level . x)
+    (if (>= glcore:debuglevel level) (apply log-system (append (list "glcore: " x))))))
+ (else))
+
+(cond-expand
+ (profile ;; ignore even when otherwise in `debug` mode
+  (define-macro (glcore:log . ignored) #!void))
+ (debug) ;; defined by previous `debug` expansion
+ (else (define-macro (glcore:log . ignored) #!void)))
+
+;;* Runtime
 
 ;; ----------------------------------
 ;; Initialization
