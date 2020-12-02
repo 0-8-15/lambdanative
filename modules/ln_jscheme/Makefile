@@ -1,4 +1,3 @@
-
 NAME=LNjScheme
 
 android_jars/$(NAME).jar: $(NAME)/*.java
