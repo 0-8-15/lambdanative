@@ -5,7 +5,6 @@ if(LNjSchemeSession==null) {
   LNjSchemeSession = new LNjScheme.Scheme
     (new String[0])
     {
-
       public void ln_log(String msg) {
         String m = ln_log_date_formatter.format(new java.util.Date()) + msg;
         System.err.println(TAG + ": " + m);
