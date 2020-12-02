@@ -12,10 +12,11 @@ class SchemeWebView extends android.webkit.WebView {
     return interpreter.eval(LNjScheme.Scheme.cons(fn, LNjScheme.Scheme.cons(arg1, args)));
   }
 
-  private Object iapply(Object fn, Object arg1) { return iapply(fn, arg1, null); }
+  private Object iapply(Object fn, Object arg1) {
+    return iapply(fn, arg1, null);
+  }
 
   class SchemeWebViewClient extends android.webkit.WebViewClient {
-
     public Object onloadresource = null;
     public Object onpagefinished = null;
     public Object onpagecomplete = null;
