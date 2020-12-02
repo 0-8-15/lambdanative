@@ -127,5 +127,4 @@ LNjSchemeEvaluateNoSync
     (LNjScheme.Scheme.sym("ln-mglview"),
      mGLView
      )));
-
 // eof: LNjScheme
