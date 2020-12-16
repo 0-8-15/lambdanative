@@ -200,10 +200,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;; ----------------------------------
 ;; textures 
 
-;; each entry is a vector of initflag,texure,w,h,u8data,pixeltype
-(define glCore:textures (##still-copy (make-table)))
-(define glCore:tidx 0)
-(define glCore:curtexture -1)
+(cond-expand ;; CONSTRUCTION-CASE
+ ((or debug) ;; tentative changes
+  ;;; intentions:
+  ;;; 1. hide globals glCore:textures and glCore:tidx (at least)
+  ;;; 2. (short term) replace vector with distinct type
+
+  (define %%glCore:textures-ref)
+
+  (let ((glCore:textures (make-table)))
+    ;; should we use `(##still-copy (make-table))` for glCore:textures?
+    (define (glCore:textures-ref texture default)
+      (table-ref glCore:textures texture default))
+    (set! %%glCore:textures-ref glCore:textures-ref))
+
+  ) ;; end of tentative changes
+ (else ;; old version
+  ;; each entry is a vector of initflag,texure,w,h,u8data,pixeltype
+  (define glCore:textures (##still-copy (make-table)))
+  (define glCore:tidx 0)
+  (define glCore:curtexture -1)
+  ;; forward compatible replacements
+  (define (%%glCore:textures-ref texture default)
+    (table-ref glCore:textures texture default))
+  ) ;; end of old version
+ ) ;; end of CONSTRUCTION-CASE
 
 (define (glCoreTextureCreate w h data . aux)
   (glcore:log 5 "glCoreTextureCreate")
