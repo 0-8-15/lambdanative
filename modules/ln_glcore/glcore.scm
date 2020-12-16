@@ -201,56 +201,136 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;; textures
 
 (cond-expand ;; CONSTRUCTION-CASE
- ((or debug) ;; tentative changes
+ ((or gambit debug) ;; tentative changes
   ;;; intentions:
   ;;; 1. hide globals glCore:textures and glCore:tidx (at least)
   ;;; 2. (short term) replace vector with distinct type
 
+  ;; (: (%%glCore:textures-ref t d) <<== (table-ref [abstract:glCore:textures] t d))
   (define %%glCore:textures-ref)
+  ;; glCoreTextureCreate EXPORTED - ubiquitious
+  ;;;
+  ;;; (: (glCoreTextureCreate w h data #!optional (interpolation GL_LINEAR) (wrap GL_CLAMP))
+  ;;;    -> fixnum)
   (define glCoreTextureCreate)
+  ;; glCoreTextureReset -- TBD: unknown usage status
+  ;;;
+  ;;; (: glCoreTextureReset -> undefined)
+  ;;;
+  ;;; purpose: clear resources
   (define glCoreTextureReset)
+
+  ;; Implementation (volatile)
+
+  (define-type glCore:texture
+    macros: prefix: %MATURITY+3%texture%macro-
+    %%valid ;; FIXME: factor out from immutable components
+    glidx   ;; index (for opengl and internal table)
+    %%-???-u32vector ;; what is this? mutable?
+    width
+    height
+    (%%-???-u8vector:data unprintable:)
+    pixeltype
+    interpolation
+    wrap
+    )
+
+  (define (glCore:texture? x) (%MATURITY+3%texture%macro-glCore:texture? x)) ;; avoid eventually!
+
+  (define (glCore:texture-valid? texture)
+    (%MATURITY+3%texture%macro-glCore:texture-%%valid texture))
+
+  (define (glCore:texture-invalidate! texture)
+    (%MATURITY+3%texture%macro-glCore:texture-%%valid-set! texture #f))
+
+  (define (glCore:texture-valid! texture)
+    (%MATURITY+3%texture%macro-glCore:texture-%%valid-set! texture #t))
+
+  (define (glCore:texture-%%-???-u32vector texture) ;; was vector-ref t 1
+    (%MATURITY+3%texture%macro-glCore:texture-%%-???-u32vector texture))
+
+  (define (glCore:texture-width texture)
+    (%MATURITY+3%texture%macro-glCore:texture-width texture))
+
+  (define (glCore:texture-height texture)
+    (%MATURITY+3%texture%macro-glCore:texture-height texture))
+
+  (define (glCore:texture-data texture)
+    (%MATURITY+3%texture%macro-glCore:texture-%%-???-u8vector:data texture))
+
+  (define (glCore:texture-pixeltype texture)
+    (%MATURITY+3%texture%macro-glCore:texture-pixeltype texture))
+
+  (define (glCore:texture-pixeltype-set! texture)
+    (%MATURITY+3%texture%macro-glCore:texture-pixeltype texture))
+
+  (define (glCore:texture-interpolation texture)
+    (%MATURITY+3%texture%macro-glCore:texture-interpolation texture))
+
+  (define (glCore:texture-interpolation-set! texture)
+    (%MATURITY+3%texture%macro-glCore:texture-interpolation texture))
+
+  (define (glCore:texture-wrap texture)
+    (%MATURITY+3%texture%macro-glCore:texture-wrap texture))
+
+  (define (glCore:texture-wrap-set! texture)
+    (%MATURITY+3%texture%macro-glCore:texture-wrap texture))
 
   (let (;; TBD: not thread safe, assert exclusive access at least in debug
         (glCore:textures (make-table))
-        (glCore:tidx 0))
-    ;; should we use `(##still-copy (make-table))` for glCore:textures?
-    (define (glCore:textures-ref texture default)
-      (table-ref glCore:textures texture default))
+        (glCore:tidx 0)
+        ;; TBD: now never using ##still-copy
+        (maturity:use-still-copy/-1 (if #f ##still-copy identity)))
 
-    (define (%%glCoreTextureCreate w h data . aux)
-      (glcore:log 5 "glCoreTextureCreate")
-      (let* ((o1x (pair? aux))
-             (o2 (and o1x (cdr aux))))
-        (let ((idx glCore:tidx)
-              (pixeltype
-               (cond
-                ((fx= (u8vector-length data) (* w h)) GL_ALPHA)
-                ((fx= (u8vector-length data) (* 3 w h)) GL_RGB)
-                ((fx= (u8vector-length data) (* 4 w h)) GL_RGBA)
-                (else (log-error "glCoreTextureCreate: Invalid data range") #f)))
-              (interpolation (if o1x (car aux) GL_LINEAR))
-              (wrap (if (pair? o2) (car o2) GL_CLAMP)))
-          (table-set!
-           glCore:textures idx
-           (##still-copy
-            (vector #f (u32vector 0) w h (##still-copy data) pixeltype interpolation wrap)))
-          (set! glCore:tidx (fx+ glCore:tidx 1))
-          idx)))
+    ;; ?? should we use `(##still-copy (make-table))` for glCore:textures?
+    (define (glCore:textures-ref texture default)
+      (if (%MATURITY+3%texture%macro-glCore:texture? texture)
+          texture
+          (table-ref glCore:textures texture default)))
+
+    (define (%%glCoreTextureCreate w h data #!optional (interpolation GL_LINEAR) (wrap GL_CLAMP))
+      ;; (glcore:log 5 "glCoreTextureCreate")
+      #;(MATURITY -1 "legacy; TBD: ensure resources are actually released" 'glCoreTextureCreate)
+      (let ((idx glCore:tidx)
+            (pixeltype
+             (cond
+              ((fx= (u8vector-length data) (* w h)) GL_ALPHA)
+              ((fx= (u8vector-length data) (* 3 w h)) GL_RGB)
+              ((fx= (u8vector-length data) (* 4 w h)) GL_RGBA)
+              (else (log-error "glCoreTextureCreate: Invalid data range") #f))))
+        (table-set!
+         glCore:textures idx
+         (%MATURITY+3%texture%macro-make-glCore:texture
+          #f ;; volatile
+          idx
+          (u32vector 0) ;; unknown
+          w h ;; 2d interval
+          (maturity:use-still-copy/-1 data)
+          pixeltype interpolation wrap))
+        (set! glCore:tidx (fx+ glCore:tidx 1))
+        idx))
 
     ;; clear all textures
-    (define (%%glCoreTextureReset)
-      (glcore:log 5 "glCoreTextureReset")
-      (let ((tlist '()))
-        (table-for-each (lambda (k v) (set! tlist (append tlist (list k)))) glCore:textures)
-        (for-each (lambda (t) (_glCoreTextureReset t)) tlist)
-        ))
+    (define (%%glCoreTextureReset!)
+      (table-for-each
+       (lambda (k entry)
+         (when (glCore:texture-valid? entry)
+           (glDeleteTextures 1 (%MATURITY+3%texture%macro-glCore:texture-%%-???-u32vector entry))
+           (glCore:texture-invalidate! entry)))
+       glCore:textures)
+      (when #f  ;; should we clean references too?
+        (set! glCore:textures (make-table))
+        (set! glCore:tidx 0)))
 
-    (set! glCoreTextureReset %%glCoreTextureReset)
+    (unless glCore:textures (%%reset!))
+
+    (set! glCoreTextureReset %%glCoreTextureReset!)
     (set! %%glCore:textures-ref glCore:textures-ref)
     (set! glCoreTextureCreate %%glCoreTextureCreate))
 
   ) ;; end of tentative changes
  (else ;; old version
+
   ;; each entry is a vector of initflag,texure,w,h,u8data,pixeltype
   (define glCore:textures (##still-copy (make-table)))
   (define glCore:tidx 0)
@@ -258,6 +338,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ;; forward compatible replacements
   (define (%%glCore:textures-ref texture default)
     (table-ref glCore:textures texture default))
+
+  (define (glCore:texture-valid? texture)
+    (vector-ref texture 0))
+
+  (define (glCore:texture-invalidate! texture)
+    (vector-set! texture 0 #f))
+
+  (define (glCore:texture-valid! texture)
+    (vector-set! texture 0 #t))
+
+  (define (glCore:texture-%%-???-u32vector texture) ;; was vector-ref t 1
+    (vector-ref texture 1))
+
+  (define (glCore:texture-width texture)
+    (vector-ref texture 2))
+
+  (define (glCore:texture-height texture)
+    (vector-ref texture 3))
+
+  (define (glCore:texture-data texture)
+    (vector-ref texture 4))
+
+  (define (glCore:texture-pixeltype texture)
+    (vector-ref texture 5))
+
+  (define (glCore:texture-interpolation texture)
+    (vector-ref texture 6))
+
+  (define (glCore:texture-wrap texture)
+    (vector-ref texture 7))
 
   (define (glCoreTextureCreate w h data . aux)
     (glcore:log 5 "glCoreTextureCreate")
@@ -278,38 +388,54 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (vector #f (u32vector 0) w h (##still-copy data) pixeltype interpolation wrap)))
         (set! glCore:tidx (fx+ glCore:tidx 1))
         idx)))
+  ;; reset a texture entry
+  (define (_glCoreTextureReset t)
+    (glcore:log 5 "_glCoreTextureReset")
+    (let ((entry (%%glCore:textures-ref t #f)))
+      (if (and entry (glCore:texture-valid? entry))
+          (begin
+            (glDeleteTextures 1 (glCore:texture-%%-???-u32vector entry))
+            (glCore:texture-invalidate! entry)))))
 
   ;; clear all textures
   (define (glCoreTextureReset)
     (glcore:log 5 "glCoreTextureReset")
-    (let ((tlist '()))
+    (let ((tlist '())) ;; collect list of entries
+      ;;;
+      ;;; Jikes: by ... no way!
       (table-for-each (lambda (k v) (set! tlist (append tlist (list k)))) glCore:textures)
-      (for-each (lambda (t) (_glCoreTextureReset t)) tlist)
-      ))
+      (for-each (lambda (t) (_glCoreTextureReset t)) tlist)))
 
   ) ;; end of old version
  ) ;; end of CONSTRUCTION-CASE
 
 
+(define (glCore:textures-ref
+         num #!optional
+         (failure (lambda (num) (error "glCore:textures-ref: unbound index" num))))
+  (cond
+   ((fixnum? num) (or (%%glCore:textures-ref t #f) (failure num)))
+   (else (error "not a fixnum" num glCore:textures-ref))))
+
 ;; return texture width
 (define (glCoreTextureWidth t)
   (glcore:log 5 "glCoreTextureWidth")
   (let ((entry (%%glCore:textures-ref t #f)))
-    (if entry (vector-ref entry 2) (begin
+    (if entry (glCore:texture-width entry) (begin
       (log-error "glCoreTextureWidth: unbound index " t) #f))))
 
 ;; return texture height
 (define (glCoreTextureHeight t)
   (glcore:log 5 "glCoreTextureWidth")
   (let ((entry (%%glCore:textures-ref t #f)))
-    (if entry (vector-ref entry 3) (begin
+    (if entry (glCore:texture-height entry) (begin
       (log-error "glCoreTextureHeight: unbound index " t) #f))))
 
 ;; return texture data
 (define (glCoreTextureData t)
   (glcore:log 5 "glCoreTextureData")
   (let ((entry (%%glCore:textures-ref t #f)))
-    (if entry (vector-ref entry 4) (begin
+    (if entry (glCore:texture-data entry) (begin
       (log-error "glCoreTextureData: unbound index " t) #f))))
 
 ;; %%%%%%%%%%%%%%%%%%%%
@@ -353,8 +479,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define (glCoreTextureDraw x y w0 h0 t x1 y1 x2 y2 r . colors)
   (let ((entry (%%glCore:textures-ref t #f)))
     (if entry
-        (let ((w (flo (if (fx= (fix w0) 0) (vector-ref entry 2) w0)))
-              (h (flo (if (fx= (fix h0) 0) (vector-ref entry 3) h0))))
+        (let ((w (flo (if (fx= (fix w0) 0) (glCore:texture-width entry) w0)))
+              (h (flo (if (fx= (fix h0) 0) (glCore:texture-height entry) h0))))
           (if (null? glcore:cliplist)
               (if (pair? colors)
                   (glCore:TextureDrawUnClipped
@@ -476,22 +602,46 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;; to use this, first modify data returned with glCoreTextureData..
 (define (glCoreTextureUpdate t)
   (glcore:log 5 "glCoreTextureUpdate")
+  (if (fixnum? t) (set! t (%%glCore:textures-ref t #f)))
   (_glCoreTextureBind t) ;; select the texture as current
-  (let* ((entry (%%glCore:textures-ref t #f))
-         (w (vector-ref entry 2))
-         (h (vector-ref entry 3))
-         (data (vector-ref entry 4))
-         (pixeltype (vector-ref entry 5)))
-    (glTexSubImage2D GL_TEXTURE_2D 0 0 0 w h pixeltype GL_UNSIGNED_BYTE data)
-  ))
+  (let ((entry t))
+    (let ((w (glCore:texture-width entry))
+          (h (glCore:texture-height entry))
+          (data (glCore:texture-data entry))
+          (pixeltype (glCore:texture-pixeltype entry)))
+      (glTexSubImage2D GL_TEXTURE_2D 0 0 0 w h pixeltype GL_UNSIGNED_BYTE data))))
+
+(define (%%glCoreTextureInit! texture) ;; texture structure
+  (let ((u32t (glCore:texture-%%-???-u32vector texture))
+        (w (glCore:texture-width texture))
+        (h (glCore:texture-height texture))
+        (data (glCore:texture-data texture))
+        (pixeltype (glCore:texture-pixeltype texture))
+        (interp (glCore:texture-interpolation texture))
+        (wrap  (glCore:texture-wrap texture)))
+    (glGenTextures 1 u32t)
+    (if (or (= (u32vector-ref u32t 0) GL_INVALID_VALUE)
+            ;; this is a general check that gl is working in this thread
+            (= (glIsEnabled GL_TEXTURE_2D) 0))
+        (glcore:log 5 "_glCoreTextureInit: failed to generate texture")
+        (begin
+          (glCore:texture-valid! texture) ;; mark as initialized
+          (glBindTexture GL_TEXTURE_2D (u32vector-ref u32t 0))
+          (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER interp)
+          (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER interp)
+          (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S wrap)
+          (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T wrap)
+          (glTexImage2D GL_TEXTURE_2D 0 pixeltype w h 0 pixeltype GL_UNSIGNED_BYTE data)))))
 
 (define (_glCoreTextureBind t)
   (glcore:log 5 "_glCoreTextureBind")
-  (let ((entry (%%glCore:textures-ref t #f)))
+  (let ((entry (if (fixnum? t) (%%glCore:textures-ref t #f) t)))
     (if entry
         (begin
-          (unless (vector-ref entry 0) (_glCoreTextureInit t)) ;; cache texture `t`
-          (let ((tx (u32vector-ref (vector-ref entry 1) 0)))
+          (unless (glCore:texture-valid? entry)
+            ;; TBD: maybe move into the reference operation?
+            (%%glCoreTextureInit! entry))
+          (let ((tx (u32vector-ref (glCore:texture-%%-???-u32vector entry) 0)))
             (if (not (= glCore:curtexture tx))
                 (begin
                   (glBindTexture GL_TEXTURE_2D tx)
@@ -500,40 +650,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (_glCoreTextureInit t)
   (glcore:log 5 "_glCoreTextureInit")
-  (let* ((entry (%%glCore:textures-ref t #f))
-         (u32t (vector-ref entry 1))
-         (w (vector-ref entry 2))
-         (h (vector-ref entry 3))
-         (data (vector-ref entry 4))
-         (pixeltype (vector-ref entry 5))
-         (interp  (vector-ref entry 6))
-         (wrap  (vector-ref entry 7)))
-    (glGenTextures 1 u32t)
-    (if (or (= (u32vector-ref u32t 0) GL_INVALID_VALUE)
-      ;this is a general check that gl is working in this thread
-            (= (glIsEnabled GL_TEXTURE_2D) 0))
-       (glcore:log 5 "_glCoreTextureInit: failed to generate texture")
-       (begin
-         (vector-set! entry 0 #t)  ;; mark as initialized
-         (glBindTexture GL_TEXTURE_2D (u32vector-ref u32t 0))
-         (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER interp)
-         (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER interp)
-         (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S wrap)
-         (glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T wrap)
-         (glTexImage2D GL_TEXTURE_2D 0 pixeltype w h 0 pixeltype GL_UNSIGNED_BYTE data)
-     ))
-  ))
-
-;; reset a texture entry
-(define (_glCoreTextureReset t)
-  (glcore:log 5 "_glCoreTextureReset")
-  (let* ((entry (%%glCore:textures-ref t #f))
-         (u32t (vector-ref entry 1)))
-    (if (vector-ref entry 0) (begin
-      (glDeleteTextures 1 u32t)
-      (vector-set! entry 0 #f) ;; mark as uninitialized
-    ))
-  ))
+  (unless (fixnum? t) (error "_glCoreTextureInit: wrong argument type"))
+  (let ((entry (%%glCore:textures-ref t #f)))
+    (if entry (%%glCoreTextureInit! entry)
+        (log-error "_glCoreTextureInit: unknown index " t))))
 
 ;; take screen shot
 (define (glCoreReadPixels x y w h)
