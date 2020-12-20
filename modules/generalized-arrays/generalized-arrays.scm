@@ -939,6 +939,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   body                    ;; the backing store for this array
   indexer                 ;; see below
   safe?                   ;; do we check whether bounds (in getters and setters) and values (in setters) are valid
+  ordered                 ;; cached %%compute-array-elements-in-order? (#f: unknown 0: false)
   )
 
 (define specialized-array-default-safe?
@@ -986,6 +987,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                          #f        ; body
                          #f        ; indexer
                          #f        ; safe?
+                         #f        ; ordered (unknown)
                          )))))
 
 (define (array? x)
@@ -1565,7 +1567,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-safe? obj))))
 
-(define (%%array-elements-in-order? array)
+(define (%%compute-array-elements-in-order? array)
   (let ((domain  (%%array-domain array))
         (indexer (%%array-indexer array)))
     (case (%%interval-dimension domain)
@@ -1672,6 +1674,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (* increment (- (car uppers) (car lowers)))))))))))
                ;; return a proper boolean instead of the volume of the domain
                #t))))))
+
+(define (%%array-elements-in-order? array)
+  (let ((ordering-known (%%array-ordered array)))
+    (cond
+     ((not ordering-known)
+      (let ((ordered (%%compute-array-elements-in-order? array)))
+        (%%array-ordered-set! array (if ordered 1 0))
+        ordered))
+      ((0) #f)
+      (else #t))))
 
 (define (array-elements-in-order? array)
   (cond ((not (specialized-array? array))
@@ -1842,7 +1854,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                     storage-class
                     body
                     indexer
-                    safe?))))
+                    safe?
+                    #f ;; ordered: unknown
+                    ))))
 
 (define (%%interval->basic-indexer interval)
   (case (%%interval-dimension interval)
