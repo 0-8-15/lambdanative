@@ -583,10 +583,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-volume interval))))
 
 (define (%%interval= interval1 interval2)
-  (and (equal? (%%interval-upper-bounds interval1)
-               (%%interval-upper-bounds interval2))
-       (equal? (%%interval-lower-bounds interval1)
-               (%%interval-lower-bounds interval2))))
+  (or (eq? interval1 interval2)
+      (and (equal? (%%interval-upper-bounds interval1)
+                   (%%interval-upper-bounds interval2))
+           (equal? (%%interval-lower-bounds interval1)
+                   (%%interval-lower-bounds interval2)))))
 
 (define (interval= interval1 interval2)
   (cond ((not (and (interval? interval1)
