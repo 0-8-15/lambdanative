@@ -642,11 +642,6 @@ OTHER DEALINGS IN THE SOFTWARE.
      ;; boolean `or` and `and` special forms) TBD: specilise say four
      ;; arguments or so.
      ((x) (check-interval+ x) x)
-     ((a b)
-      (cond
-       ((eq? a b) (check-interval+ a) a)
-       ((interval= a b) a)
-       (else (%%interval-intersect a b))))
      ((a b . rest)
       (do ((a (check-interval+ a) i)
            (b b (car rest))
@@ -654,7 +649,15 @@ OTHER DEALINGS IN THE SOFTWARE.
            (i (cond
                ((eq? a b) a)
                ((interval= a b) (check-interval+ a) a)
-               (else (%%interval-intersect a b)))))
+               ((= (%%interval-dimension a) (%%interval-dimension b))
+                (let ((r (%%interval-intersect (list a b))))
+                  (cond
+                   ((not r))
+                   ((interval= a r) a)
+                   ((interval= b r) b)
+                   (else r))))
+               (else
+                (error "interval-intersect: Not all arguments have the same dimension: " a b)))))
           ((or (not i) (null? rest))
            i))))))
 
