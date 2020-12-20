@@ -583,10 +583,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-volume interval))))
 
 (define (%%interval= interval1 interval2)
-  (and (equal? (%%interval-upper-bounds interval1)
-               (%%interval-upper-bounds interval2))
-       (equal? (%%interval-lower-bounds interval1)
-               (%%interval-lower-bounds interval2))))
+  (or (eq? interval1 interval2)
+      (and (equal? (%%interval-upper-bounds interval1)
+                   (%%interval-upper-bounds interval2))
+           (equal? (%%interval-lower-bounds interval1)
+                   (%%interval-lower-bounds interval2)))))
 
 (define (interval= interval1 interval2)
   (cond ((not (and (interval? interval1)
@@ -642,11 +643,6 @@ OTHER DEALINGS IN THE SOFTWARE.
      ;; boolean `or` and `and` special forms) TBD: specilise say four
      ;; arguments or so.
      ((x) (check-interval+ x) x)
-     ((a b)
-      (cond
-       ((eq? a b) (check-interval+ a) a)
-       ((interval= a b) a)
-       (else (%%interval-intersect a b))))
      ((a b . rest)
       (do ((a (check-interval+ a) i)
            (b b (car rest))
@@ -654,7 +650,15 @@ OTHER DEALINGS IN THE SOFTWARE.
            (i (cond
                ((eq? a b) a)
                ((interval= a b) (check-interval+ a) a)
-               (else (%%interval-intersect a b)))))
+               ((= (%%interval-dimension a) (%%interval-dimension b))
+                (let ((r (%%interval-intersect (list a b))))
+                  (cond
+                   ((not r))
+                   ((equal? a r) a) ;; equivalent to %%interval=
+                   ((equal? b r) b)
+                   (else r))))
+               (else
+                (error "interval-intersect: Not all arguments have the same dimension: " a b)))))
           ((or (not i) (null? rest))
            i))))))
 
