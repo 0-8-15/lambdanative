@@ -653,8 +653,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (let ((r (%%interval-intersect (list a b))))
                   (cond
                    ((not r))
-                   ((%%interval= a r) a)
-                   ((%%interval= b r) b)
+                   ((equal? a r) a) ;; equivalent to %%interval=
+                   ((equal? b r) b)
                    (else r))))
                (else
                 (error "interval-intersect: Not all arguments have the same dimension: " a b)))))
