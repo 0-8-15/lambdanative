@@ -1686,8 +1686,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       (let ((ordered (%%compute-array-elements-in-order? array)))
         (%%array-ordered-set! array (if ordered 1 0))
         ordered))
-      ((0) #f)
-      (else #t))))
+     ((= 0 ordering-known) #f)
+     (else #t))))
 
 (define (array-elements-in-order? array)
   (cond ((not (specialized-array? array))
