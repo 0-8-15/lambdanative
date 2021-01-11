@@ -169,13 +169,19 @@ ___result = GL_CLAMP_TO_EDGE;
   ((c-lambda (float float float) void "glTranslatef") 
      (flo a) (flo b) (flo c)))
 
+(define glTranslatef//checks (c-lambda (float float float) void "glTranslatef"))
+
 (define (glScalef a b c) 
   ((c-lambda (float float float) void "glScalef") 
      (flo a) (flo b) (flo c)))
 
+(define glScalef//checks (c-lambda (float float float) void "glScalef"))
+
 (define (glRotatef a b c d) 
   ((c-lambda (float float float float) void "glRotatef")
      (flo a) (flo b) (flo c) (flo d)))
+
+(define glRotatef//checks (c-lambda (float float float float) void "glRotatef"))
 
 (define glEnable (c-lambda (int) void "glEnable"))
 
