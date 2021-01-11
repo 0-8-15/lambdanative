@@ -216,27 +216,79 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;; Reducing the computational complexity of font operations improves
 ;;; rendering time.
 
+(define-type ln-ttf:glyph
+  macros: prefix: macro-
+  desc ;; for now legacy: (key (texcoord1..4) X Y Z)
+  width
+  height
+  texture
+  texcoords ;; generic 4 element vector of flownums
+  rect-texcoords ;; 4x2 element f32vector
+  ;; order is sorta important here
+  offsetx
+  advancex
+  offsety
+  )
+
+(define (ln-ttf:glyph? obj) (macro-ln-ttf:glyph? obj))
+(define (ttf:glyph-desc obj) (macro-ln-ttf:glyph-desc obj))
+(define (ttf:glyph-width obj) (macro-ln-ttf:glyph-width obj))
+(define (ttf:glyph-height obj) (macro-ln-ttf:glyph-height obj))
+(define (ttf:glyph-image obj) (macro-ln-ttf:glyph-texture obj))
+(define (ttf:glyph-texcoords obj) (macro-ln-ttf:glyph-texcoords obj))
+(define (ttf:glyph-rect-texcoords obj) (macro-ln-ttf:glyph-rect-texcoords obj))
+(define (ttf:glyph-offsetx obj) (macro-ln-ttf:glyph-offsetx obj))
+(define (ttf:glyph-advancex obj) (macro-ln-ttf:glyph-advancex obj))
+(define (ttf:glyph-offsety obj) (macro-ln-ttf:glyph-offsety obj))
+
 (define-type ln-ttf:font
   macros: prefix: macro-
+  ;; TBD: get rid of the key doubling - requires changes to call sites
   desc ;; for now the legacy description of a font as a assoc-list
-  char->desc-table
+  char->glyph-table
   )
 
 (define (ln-ttf:font? obj) (macro-ln-ttf:font? obj))
 
 (define find-font/desc)
 
-(define (ln-ttf:font-ref font char) ;; -> glyph
+(define (ln-ttf:font-ref font char) ;; -> legacy glyph
   (cond
    ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
-    (table-ref (macro-ln-ttf:font-char->desc-table font) char #f))
+    (let ((entry (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f)))
+      (and entry (macro-ln-ttf:glyph-desc entry))))
    (else (ln-ttf:font-ref (find-font font) char))))
 
+(define (MATURITY+1:ln-ttf:font-ref font char) ;; -> glyph
+  (cond
+   ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
+    (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f))
+   (else (error "illegal arguments" MATURITY+1:ln-ttf:font-ref font char))))
+
 (define (make-ln-ttf:font/desc fnt)
-  (let ((font-table (list->table
-                     (let ((double-the-key (lambda (x) (cons (car x) x))))
-                       ;; TBD: get rid of the doubling - requires changes to call sites
-                       (map double-the-key fnt)))))
+  (define (convert desc g)
+    (receive (img offsetx advancex offsety) (apply values g)
+      (receive (width height texture x0 y0 x1 y1) (apply values img)
+        (let ((texcoords (vector x0 y0 x1 y1))
+              (rect-texcoords
+               (f32vector
+                x0 y1
+                x1 y1
+                x0 y0
+                x1 y0)))
+          (macro-make-ln-ttf:glyph
+           desc width height texture
+           texcoords rect-texcoords
+           offsetx advancex offsety)))))
+  (let ((font-table
+         (list->table
+          (let ((convert
+                 (lambda (x)
+                   ;; TBD: get rid of the key doubling - requires changes to call sites
+                   (let ((k (car x))
+                         (v (cdr x)))
+                     (cons k (convert x v))))))
+            (map convert fnt)))))
     (macro-make-ln-ttf:font fnt font-table)))
 
 (define find-font

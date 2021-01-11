@@ -42,16 +42,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (cond-expand
  (gambit
-  (##define-macro (macro-absent-obj)  `',(##type-cast -6 2)))
+  (##define-macro (macro-absent-obj)  `',(##type-cast -6 2))
+  (define-macro (%%vector-length v) ;; maybe unsafe/optimized version
+    `(##vector-length ,v))
+  (define-macro (%%vector-ref v i) ;; maybe unsafe/optimized version
+    `(##vector-ref ,v ,i)))
  (else
   (define macro-absent-obj
     (let ((obj (list 'absent-obj)))
       (lambda ()
-        obj)))))
+        obj)))
+  (define-macro (%%vector-length v) ;; may be unsafe version
+    `(vector-length ,v))
+  (define-macro (%%vector-ref v i) ;; may be unsafe version
+    `(vector-ref ,v ,i))))
 
 (cond-expand
  (gambit-c
-  
+
   (define (vector-copy! dst-vect dst-start src-vect src-start src-end)
     (subvector-move! src-vect src-start src-end dst-vect dst-start))
 
@@ -136,45 +144,59 @@ OTHER DEALINGS IN THE SOFTWARE.
     (define c128vector-copy! #f))))
 
 
+(declare (inline))
+
 ;;; We need a multi-argument every, but not as fancy as in Olin Shiver's
 ;;; list library.  (Shiver's version works fine, though, for our purposes.)
 
-(define (%%every pred list . lists)
-  (if (pair? lists)
-      (let loop ((lists (cons list lists)))
-        (or (null? (car lists))
-            (and (apply pred (map car lists))
-                 (loop (map cdr lists)))))
-      (let loop ((list list))
-        (or (null? list)
-            (and (pred (car list))
-                 (loop (cdr list)))))))
+;;; (define (%%every pred list . lists)
+;;;   (if (pair? lists)
+;;;       (let loop ((lists (cons list lists)))
+;;;         ;; Note: this case is actually not reached!
+;;;         (or (null? (car lists))
+;;;             (and (apply pred (map car lists))
+;;;                  (loop (map cdr lists)))))
+;;;       ;; at least for gambit do loops are faster
+;;;       (do ((list list (and (pred (car list)) (cdr list))))
+;;;           ((not (pair? list)) (and list #t)))))
+
+(define-macro (%%every pred expr)
+  ;; at least for gambit do loops are faster
+  (let ((lst (gensym 'list)))
+    `(do ((,lst ,expr (and (,pred (car ,lst)) (cdr ,lst))))
+         ((not (pair? ,lst)) (and ,lst #t)))))
 
 ;;; the following is used in error checks.
 
-(define (%%vector-every pred vec #!optional (vec2 (macro-absent-obj)) #!rest vecs)
+(define (%%vector-every pred vec . vecs)
 
-  (define (every1 vec i)
-    (or (< i 0)
-        (and (pred (vector-ref vec i))
-             (every1 vec (- i 1)))))
+  (define (every1 vec)
+    (do ((limit (%%vector-length vec)
+                (and (pred (%%vector-ref vec i)) limit))
+         (i 0 (fx+ i 1)))
+        ((or (not limit)
+             (fx= i limit))
+         (and limit #t))))
 
-  (define (every2 vec1 vec2 i)
-    (or (< i 0)
-        (and (pred (vector-ref vec1 i) (vector-ref vec2 i))
-             (every2 vec1 vec2 (- i 1)))))
+  (define (every2 vec1 vec2)
+    (do ((limit (%%vector-length vec1)
+                (and (pred (%%vector-ref vec1 i) (%%vector-ref vec2 i)) limit))
+         (i 0 (fx+ i 1)))
+        ((or (not limit)
+             (fx= i limit))
+         (and limit #t))))
 
   (define (every-general vecs i)
     (or (< i 0)
         (and (apply pred (map (lambda (vec) (vector-ref vec i)) vecs))
              (every-general vecs (- i 1)))))
 
-  (cond ((eq? vec2 (macro-absent-obj))
-         (every1 vec (- (vector-length vec) 1)))
-        ((null? vecs)
-         (every2 vec vec2 (- (vector-length vec) 1)))
-        (else
-         (every-general (cons vec (cons vec2 vecs)) (- (vector-length vec) 1)))))
+  (if (null? vecs)
+      (every1 vec)
+      (if (null? (cdr vecs))
+          (every2 vec (car vecs))
+          ;; (MATURITY -3 "I don't thing this case is ever hit!" '%%vector-every)
+          (every-general (cons vec vecs) (- (vector-length vec) 1)))))
 
 ;;; requires vector-map, vector-copy function
 
@@ -186,7 +208,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; requires fixnum? and flonum?
 
-(declare (inline))
+(define %%make-vector-of-zero-constants
+  ;; BEWARE: if the Scheme system does not ensure those vectors are
+  ;; never modified be sure they are never exposed!
+  ;;
+  ;; try to conserve memory and run time for common cases
+  (let ((d1 '#(0))
+        (d2 '#(0 0))
+        (d3 '#(0 0 0))
+        (d4 '#(0 0 0 0)))
+    (lambda (length)
+      (case length
+        ((1) d1)
+        ((2) d2)
+        ((3) d3)
+        ((4) d4)
+        (else (make-vector length 0))))))
 
 ;;; An interval is a cross product of multi-indices
 
@@ -195,8 +232,54 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; where l_i < u_i for 0 <= i < n, and n > 0 is the dimension of the interval
 
 (define-structure %%interval
+  ;; caches for frequently used valued
+  ;;
+  ;; (Note: these fields, which are mere performance optimizations,
+  ;; came better _after_ the actual content.  However gambit's record
+  ;; printer gives more readable results with the volume in front.)
+  dimension    ;; exact positive integer
+  volume ;; exact positive integer
+  ;; original, required fields
   lower-bounds            ;; a vector of exact integers l_0,...,l_n-1
-  upper-bounds)           ;; a vector of exact integers u_0,...,u_n-1
+  upper-bounds            ;; a vector of exact integers u_0,...,u_n-1
+  ) ;; %%interval
+
+(set!
+ make-%%interval
+ ;; PRECONDITION: lovec and upvec are checked and private
+ (let ((allocate make-%%interval)
+       (d1 '#(0))
+       (d2 '#(0 0))
+       (d3 '#(0 0 0))
+       (d4 '#(0 0 0 0)))
+   (define (build dimension lovec upvec) ;; add volume slot
+     (let ((volume
+            (do ((i (- dimension 1) (- i 1))
+                 (result 1 (* result (- (%%vector-ref upvec i)
+                                        (%%vector-ref lovec i)))))
+                ((< i 0) result))))
+       (allocate dimension volume lovec upvec)))
+   (define (specialized lovec upvec)
+     (let ((dimension (%%vector-length lovec)))
+       (cond
+        ((and (fx<= dimension 4)
+              (do ((i 0 j)
+                   (j 1 (fx+ j 1))
+                   (z (= (%%vector-ref lovec 0) 0)
+                      (and z (= (%%vector-ref lovec j) 0))))
+                  ((or (eq? j dimension) (not z))
+                   z)))
+         (build
+          dimension
+          (case dimension
+            ((1) d1)
+            ((2) d2)
+            ((3) d3)
+            ((4) d4)
+            (else lovec))
+          upvec))
+      (else (build dimension lovec upvec)))))
+   specialized))
 
 (define (interval? x)
   (%%interval? x))
@@ -212,8 +295,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (%%vector-every positive? upper-bounds)))
                (error "make-interval: The argument is not a nonempty vector of positive exact integers: " upper-bounds))
               (else
-               (make-%%interval (make-vector (vector-length upper-bounds) 0)
-                                (vector-copy upper-bounds)))))
+               (make-%%interval
+                (%%make-vector-of-zero-constants (vector-length upper-bounds))
+                (vector-copy upper-bounds)))))
       (let ((lower-bounds arg1)
             (upper-bounds arg2))
         (cond ((not (and (vector? lower-bounds)
@@ -228,26 +312,37 @@ OTHER DEALINGS IN THE SOFTWARE.
                (error "make-interval: The first and second arguments are not the same length: " lower-bounds upper-bounds))
               ((not (%%vector-every (lambda (x y) (< x y)) lower-bounds upper-bounds))
                (error "make-interval: Each lower-bound must be less than the associated upper-bound: " lower-bounds upper-bounds))
+              ((let ((dimensions (%%vector-length lower-bounds))  ;; optimize common cases
+                     (lovec lower-bounds))
+                 (do ((i 0 j)
+                      (j 1 (fx+ j 1))
+                      (z (= (%%vector-ref lovec 0) 0)
+                         (and z (= (%%vector-ref lovec j) 0))))
+                     ((or (eq? j dimensions) (not z))
+                      z)))
+               ;; make-%%interval will use specialized values; avoid copy here
+               (make-%%interval lower-bounds (vector-copy upper-bounds)))
               (else
                (make-%%interval (vector-copy lower-bounds) (vector-copy upper-bounds)))))))
 
 
 (declare (inline))
 
-(define (%%interval-dimension interval)
-  (vector-length (%%interval-lower-bounds interval)))
+;;; (define (%%interval-dimension interval)
+;;;   ;; cached along with volume in the interval now - for speed
+;;;   (%%vector-length (%%interval-lower-bounds interval)))
 
 (define (%%interval-lower-bound interval i)
-  (vector-ref (%%interval-lower-bounds interval) i))
+  (%%vector-ref (%%interval-lower-bounds interval) i))
 
 (define (%%interval-upper-bound interval i)
-  (vector-ref (%%interval-upper-bounds interval) i))
+  (%%vector-ref (%%interval-upper-bounds interval) i))
 
 (define (%%interval-lower-bounds->vector interval)
-  (vector-copy (%%interval-lower-bounds interval)))
+  (%%vector-copy (%%interval-lower-bounds interval)))
 
 (define (%%interval-upper-bounds->vector interval)
-  (vector-copy (%%interval-upper-bounds interval)))
+  (%%vector-copy (%%interval-upper-bounds interval)))
 
 (define (%%interval-lower-bounds->list interval)
   (vector->list (%%interval-lower-bounds interval)))
@@ -268,7 +363,10 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "interval-lower-bound: The first argument is not an interval: " interval i))
         ((not (exact-integer? i))
          (error "interval-lower-bound: The second argument is not an exact integer: " interval i))
-        ((not (< -1 i (%%interval-dimension interval)))
+        (;; original: (not (< -1 i (%%interval-dimension interval)))
+         ;;
+         ;; for performance (2ari, likely fail first):
+         (or (>= i (%%interval-dimension interval)) (< i 0))
          (error "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
         (else
          (%%interval-lower-bound interval i))))
@@ -278,7 +376,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "interval-upper-bound: The first argument is not an interval: " interval i))
         ((not (exact-integer? i))
          (error "interval-upper-bound: The second argument is not an exact integer: " interval i))
-        ((not (< -1 i (%%interval-dimension interval)))
+        (;; original: (not (< -1 i (%%interval-dimension interval)))
+         ;;
+         ;; for performance:
+         (or (>= i (%%interval-dimension interval))
+             (< i 0))
          (error "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
         (else
          (%%interval-upper-bound interval i))))
@@ -467,12 +569,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                (make-%%interval new-lower-bounds new-upper-bounds)
                (error "interval-dilate: The resulting interval is empty: " interval lower-diffs upper-diffs))))))
 
-(define (%%interval-volume interval)
-  (do ((i (- (%%interval-dimension interval) 1) (- i 1))
-       (result 1 (let ()
-                   (* result (- (%%interval-upper-bound interval i)
-                                (%%interval-lower-bound interval i))))))
-      ((< i 0) result)))
+;;; (define (%%interval-volume interval)
+;;;   (do ((i (- (%%interval-dimension interval) 1) (- i 1))
+;;;        (result 1 (let ()
+;;;                    (* result (- (%%interval-upper-bound interval i)
+;;;                                 (%%interval-lower-bound interval i))))))
+;;;       ((< i 0) result)))
 
 (define (interval-volume interval)
   (cond ((not (interval? interval))
@@ -481,10 +583,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-volume interval))))
 
 (define (%%interval= interval1 interval2)
-  (and (equal? (%%interval-upper-bounds interval1)
-               (%%interval-upper-bounds interval2))
-       (equal? (%%interval-lower-bounds interval1)
-               (%%interval-lower-bounds interval2))))
+  (or (eq? interval1 interval2)
+      (and (equal? (%%interval-upper-bounds interval1)
+                   (%%interval-upper-bounds interval2))
+           (equal? (%%interval-lower-bounds interval1)
+                   (%%interval-lower-bounds interval2)))))
 
 (define (interval= interval1 interval2)
   (cond ((not (and (interval? interval1)
@@ -514,7 +617,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     (and (%%vector-every < lower-bounds upper-bounds)
          (make-%%interval lower-bounds upper-bounds))))
 
-(define (interval-intersect interval1 #!optional (interval2 (macro-absent-obj)) #!rest intervals)
+(define (%%MATURITY+0:interval-intersect interval1 #!optional (interval2 (macro-absent-obj)) #!rest intervals)
   (cond ((eq? interval2 (macro-absent-obj))
          (cond ((not (interval? interval1))
                 (error "interval-intersect: The argument is not an interval: " interval1))
@@ -528,6 +631,38 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (apply error "interval-intersect: Not all arguments have the same dimension: " intervals))
                  (else
                   (%%interval-intersect intervals)))))))
+
+(define %%MATURITY+1:interval-intersect
+  ;; NOTE: (positive MATURITY values are "possible future")
+  (let ()
+    (define (check-interval+ interval)
+      (or (%%interval? interval)
+          (error "interval-intersect: The argument is not an interval: " interval)))
+    (case-lambda
+     ;; specialise common cases; return leftmost if applicable (like
+     ;; boolean `or` and `and` special forms) TBD: specilise say four
+     ;; arguments or so.
+     ((x) (check-interval+ x) x)
+     ((a b . rest)
+      (do ((a (check-interval+ a) i)
+           (b b (car rest))
+           (rest rest (cdr rest))
+           (i (cond
+               ((eq? a b) a)
+               ((interval= a b) (check-interval+ a) a)
+               ((= (%%interval-dimension a) (%%interval-dimension b))
+                (let ((r (%%interval-intersect (list a b))))
+                  (cond
+                   ((not r))
+                   ((equal? a r) a) ;; equivalent to %%interval=
+                   ((equal? b r) b)
+                   (else r))))
+               (else
+                (error "interval-intersect: Not all arguments have the same dimension: " a b)))))
+          ((or (not i) (null? rest))
+           i))))))
+
+(define interval-intersect %%MATURITY+1:interval-intersect)
 
 (declare (inline))
 
@@ -808,6 +943,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   body                    ;; the backing store for this array
   indexer                 ;; see below
   safe?                   ;; do we check whether bounds (in getters and setters) and values (in setters) are valid
+  ordered                 ;; cached %%compute-array-elements-in-order? (#f: unknown 0: false)
   )
 
 (define specialized-array-default-safe?
@@ -855,6 +991,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                          #f        ; body
                          #f        ; indexer
                          #f        ; safe?
+                         #f        ; ordered (unknown)
                          )))))
 
 (define (array? x)
@@ -1434,7 +1571,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-safe? obj))))
 
-(define (%%array-elements-in-order? array)
+(define (%%compute-array-elements-in-order? array)
   (let ((domain  (%%array-domain array))
         (indexer (%%array-indexer array)))
     (case (%%interval-dimension domain)
@@ -1541,6 +1678,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (* increment (- (car uppers) (car lowers)))))))))))
                ;; return a proper boolean instead of the volume of the domain
                #t))))))
+
+(define (%%array-elements-in-order? array)
+  (let ((ordering-known (%%array-ordered array)))
+    (cond
+     ((not ordering-known)
+      (let ((ordered (%%compute-array-elements-in-order? array)))
+        (%%array-ordered-set! array (if ordered 1 0))
+        ordered))
+      ((0) #f)
+      (else #t))))
 
 (define (array-elements-in-order? array)
   (cond ((not (specialized-array? array))
@@ -1711,7 +1858,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                     storage-class
                     body
                     indexer
-                    safe?))))
+                    safe?
+                    #f ;; ordered: unknown
+                    ))))
 
 (define (%%interval->basic-indexer interval)
   (case (%%interval-dimension interval)
@@ -1769,10 +1918,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (%%make-specialized-array interval
                                   storage-class
                                   ;; must be mutable
-                                  safe?)
-  (let* ((body    ((storage-class-maker storage-class)
-                   (%%interval-volume interval)
-                   (storage-class-default storage-class)))
+                                  safe?
+                                  #!optional (body #f))
+  (let* ((body    (cond
+                   (body ;; FIXME: add checks
+                    body)
+                   (else
+                    ((storage-class-maker storage-class)
+                     (%%interval-volume interval)
+                     (storage-class-default storage-class)))))
          (indexer (%%interval->basic-indexer interval)))
     (%%finish-specialized-array interval
                                 storage-class
@@ -1786,7 +1940,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 #!optional
                                 (storage-class generic-storage-class)
                                 ;; must be mutable?
-                                (safe? (specialized-array-default-safe?)))
+                                (safe? (specialized-array-default-safe?))
+                                ;; body is an unsafe extension to srfi-179: use given vector
+                                (body #f))
   ;; Returns a mutable specialized-array
   (cond ((not (interval? interval))
          (error "make-specialized-array: The first argument is not an interval: " interval))
@@ -1798,12 +1954,13 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%make-specialized-array interval
                                    storage-class
                                    ;; must be mutable
-                                   safe?))))
+                                   safe?
+                                   body))))
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
 (define (%%move-array-elements destination source caller)
-  
+
   ;; Here's the logic:
   ;; We require the source and destination to have the same number of elements.
   ;; If destination is a specialized array
@@ -1843,12 +2000,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   ;; We check that the elements we move to the destination are OK for the
   ;; destination because if we don't catch errors here can be very tricky to find.
-  
+
   (if (not (= (%%interval-volume (%%array-domain source))
               (%%interval-volume (%%array-domain destination))))
       (error (string-append caller "Arrays must have the same volume: ")
              destination source))
-  
+
   (if (specialized-array? destination)
       (if (%%array-elements-in-order? destination)
           ;; Now we do not assume that the domains are the same
@@ -2602,7 +2759,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define-macro (setup-permuted-getters-and-setters)
 
   (include "modules/generalized-arrays/generalized-arrays-include.scm")
-  
+
   (define (list-remove l i)
     ;; new list that removes (list-ref l i) from l
     (if (zero? i)
@@ -2678,11 +2835,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%array-permute array permutation))))
 
 (define (%%rotation->permutation k size)
-  
+
   ;; Generates a permutation that rotates
   ;; 0 1 ... size-1
   ;; left by k units.
-  
+
   (let ((result (make-vector size)))
     (let left-loop ((i 0)
                     (j k))
@@ -2721,7 +2878,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define-macro (setup-reversed-getters-and-setters)
 
   (include "modules/generalized-arrays/generalized-arrays-include.scm")
-  
+
   (define (make-symbol . args)
     (string->symbol
      (apply string-append
@@ -2808,7 +2965,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (make-array (%%array-domain array)
                      (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))))))
-  
+
 (define (array-reverse array #!optional (flip? (macro-absent-obj)))
   (if  (not (array? array))
        (error "array-reverse: The first argument is not an array: " array flip?)
@@ -2829,7 +2986,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define-macro (macro-generate-sample)
 
   (include "modules/generalized-arrays/generalized-arrays-include.scm")
-  
+
   (define (make-symbol . args)
     (string->symbol
      (apply string-append
@@ -3119,7 +3276,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "array-curry: The first argument is not an array: " array right-dimension))
         ((not (exact-integer? right-dimension))
          (error "array-curry: The second argument is not an exact integer: " array right-dimension))
-        ((not (< 0 right-dimension (%%interval-dimension (%%array-domain array))))
+        ((or (>= right-dimension (%%interval-dimension (%%array-domain array)))
+             (< right-dimension 0))
          (error "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " array right-dimension))
         ((specialized-array? array)
          (%%specialized-array-curry array right-dimension))
@@ -3650,7 +3808,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     ;; Decides whether to include v(k) in the result vector
     ;; by testing p(k), not p(v(k)).
-  
+
     (let ((n (vector-length v)))
       (define (helper k i)
         (cond ((= k n)
@@ -3662,7 +3820,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (else
                (helper (+ k 1) i))))
       (helper 0 0)))
-  
+
   (cond ((not (specialized-array? array))
          (error "specialized-array-reshape: The first argument is not a specialized array: " array new-domain))
         ((not (interval? new-domain))
