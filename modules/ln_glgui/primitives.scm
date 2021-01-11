@@ -230,7 +230,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   offsety
   )
 
-(define (ln-ttf:glyph? obj) (macro-ln-ttf:glyph? obj))
+(define (ttf:glyph? obj) (macro-ln-ttf:glyph? obj))
 (define (ttf:glyph-desc obj) (macro-ln-ttf:glyph-desc obj))
 (define (ttf:glyph-width obj) (macro-ln-ttf:glyph-width obj))
 (define (ttf:glyph-height obj) (macro-ln-ttf:glyph-height obj))
@@ -352,10 +352,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (loop (fl+ x0 gax) (cdr cs))))))
 
 (define (glgui:fontheight fnt)
-  (let* ((g (assoc 0 fnt))
-         (i (if g (glgui:glyph-image g) #f))
-         (h (if i (glgui:image-h i)
-           (cadr (cadr (car fnt)))))) h))
+  (cond
+   ((macro-ln-ttf:font? fnt) (ttf:glyph-height (MATURITY+1:ln-ttf:font-ref fnt 0)))
+   ((find-font fnt) => glgui:fontheight)
+   (else ;; MATURITY -1 backward compatible, the old code
+    (let* ((g (assoc 0 fnt))
+           (i (if g (glgui:glyph-image g) #f))
+           (h (if i (glgui:image-h i)
+                  (cadr (cadr (car fnt)))))) h))))
 
 (define (glgui:stringheight txt fnt)
   (define font (find-font fnt))
