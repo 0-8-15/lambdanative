@@ -328,6 +328,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (set! %%glCore:textures-ref glCore:textures-ref)
     (set! glCoreTextureCreate %%glCoreTextureCreate))
 
+  (define glCore:curtexture -1) ;; deprecated but required
+
   ) ;; end of tentative changes
  (else ;; old version
 
