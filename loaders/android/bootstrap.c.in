@@ -46,8 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <LNCONFIG.h>
 
-#define LAMBDANATIVE_JNI_VERSION JNI_VERSION_1_4
-
+int cmd_argc=0;
+char **cmd_argv;
 @ANDROID_C_DEFINES@
 
 // event hook
