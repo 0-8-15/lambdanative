@@ -37,6 +37,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 // microgl based main loop
 
+#if defined(LINUX)
+// new code path
+#define LEGACY_2021 0
+#else
+#define LEGACY_2021 1
+#endif
+
 #include "LNCONFIG.h"
 
 #include <stdio.h>
@@ -170,8 +177,12 @@ int main(int argc, char *argv[])
 
     // check for events
     microgl_pollevents();
+    #if LEGACY_2021
     // ask for a redraw
     microgl_refresh();
+    #else
+    ffi_event(EVENT_IDLE, 0, 0);
+    #endif
 
 #else
 

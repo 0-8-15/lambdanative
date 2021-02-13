@@ -249,7 +249,7 @@ void microgl_pollevents(void)
         motion=1;
         break;
       case Expose:
-        expose=1;
+        expose = expose || (event.xexpose.width && event.xexpose.height) ? 1 : 0;
         break;
       case ClientMessage:  
         if( (Atom) event.xclient.data.l[ 0 ] == win.WMDeleteWindow )
@@ -277,8 +277,10 @@ void microgl_pollevents(void)
   }  // Xpending
 
   if (expose) {  // process expose events
-     microgl_hook(EVENT_REDRAW,0,0); 
+     microgl_hook(EVENT_REDRAW,0,0);
+     microgl_refresh();
   }
+
 
   if (motion) { // process motion events
     microgl_hook(EVENT_MOTION, win.mouse_x, win.mouse_y);
