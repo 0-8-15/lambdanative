@@ -137,7 +137,7 @@ static LRESULT CALLBACK _microgl_callback( HWND hWnd, UINT uMsg, WPARAM wParam, 
   switch( uMsg ) {
     case WM_PAINT:
       if (move_flag) {  microgl_hook(EVENT_MOTION, new_x, new_y); move_flag=0; }
-      microgl_hook(EVENT_REDRAW,0,0);
+      microgl_hook(EVENT_REDRAW,1,0);
       break;   // no return here!
     case WM_DESTROY:
       PostQuitMessage( WM_QUIT ); return 0;
