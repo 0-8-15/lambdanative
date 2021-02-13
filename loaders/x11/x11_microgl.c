@@ -277,7 +277,7 @@ void microgl_pollevents(void)
   }  // Xpending
 
   if (expose) {  // process expose events
-     microgl_hook(EVENT_REDRAW,0,0); 
+     microgl_hook(EVENT_REDRAW,1,0); 
   }
 
   if (motion) { // process motion events
