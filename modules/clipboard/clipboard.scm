@@ -36,6 +36,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 
+(c-declare "#include <stdio.h>") ;; debug
+
 (c-declare  #<<end-of-c-declare
 
 #ifdef IOS
@@ -99,10 +101,12 @@ int clipboard_copy(char *str, int len){
   Window window = microgl_getWindow();
   Atom selection = XInternAtom(display, "CLIPBOARD", 0);
   XSetSelectionOwner (display, selection, window, 0);
-  if (XGetSelectionOwner (display, selection) != window)
+  if( XGetSelectionOwner(display, selection) != window ) {
+    fprintf(stderr, "QUESTION: Why fail here in `clipboard_copy`?\n");
     return 0;
+  }
   microgl_setCopiedString(str, len);
-  return 0;
+  return 1;
 #endif
   return 0;
 }
@@ -256,7 +260,7 @@ end-of-c-declare
 (define clipboard-clear (c-lambda (char-string) bool "clipboard_clear"))
 (define (clipboard-copy str)
   ((c-lambda (char-string int) bool "clipboard_copy")
-    str (string-length str)))
+   str (string-length str)))
 (define (clipboard-paste)
   (declare (not interrupts-enabled)) ;; important! no thread switch here
   (let ((str ((c-lambda () char-string "clipboard_paste"))))
