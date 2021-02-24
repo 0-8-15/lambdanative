@@ -158,21 +158,24 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     if(current_ContentView instanceof android.opengl.GLSurfaceView) {
       ((android.opengl.GLSurfaceView)current_ContentView).onPause();
     }
-    android.view.ViewParent parent0 = view.getParent();
-    if(parent0 instanceof android.view.ViewGroup) {
-      android.view.ViewGroup parent = (android.view.ViewGroup) parent0;
-      if(parent!=null) {
-        parent.removeView(current_ContentView);
+    if(view!=null) {
+      android.view.ViewParent parent0 = view.getParent();
+      if(parent0 instanceof android.view.ViewGroup) {
+        android.view.ViewGroup parent = (android.view.ViewGroup) parent0;
+        if(parent!=null) {
+          parent.removeView(current_ContentView);
+        }
+      } else if(parent0 != null) {
+        System.err.println("setContentView view " + view + " has unhandled parent " + parent0);
       }
-    } else if(parent0 != null) {
-      System.err.println("setContentView view " + view + " has unhandled parent " + parent0);
-    } else {
-      current_ContentView = view;
-      super.setContentView(current_ContentView);
     }
+    current_ContentView = view;
     // TBD: chances are that other classes might need a resume call too.
     if(current_ContentView instanceof android.opengl.GLSurfaceView) {
       ((android.opengl.GLSurfaceView)current_ContentView).onResume();
+    }
+    if(current_ContentView!=null) {
+      super.setContentView(current_ContentView);
     }
   }
 
@@ -228,7 +231,7 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   private void onPauseOrStop() {
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONPAUSE@
-    if (!isFinishing() && current_ContentView==mGLView && mGLView!=null) {
+    if (!isFinishing() && mGLView!=null) {
       mGLView.onPause();
     }
   }
@@ -245,10 +248,10 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   }
   @Override
   protected void onResume() {
-    super.onResume();
-    if(current_ContentView==mGLView && mGLView!=null) {
+    if(current_ContentView==mGLView) {
       mGLView.onResume();
     }
+    super.onResume();
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONRESUME@
   }
