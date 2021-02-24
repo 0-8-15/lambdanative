@@ -223,6 +223,7 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
       }
       topLayout.addView(view);
     }
+    current_ContentView = view;
     // TBD: chances are that other classes might need a resume call too.
     if(current_ContentView==mGLView) {
       if(LOG_LAYOUT) Log.i(TAG, "setContentView resuming " + current_ContentView);
@@ -302,10 +303,10 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
   }
   @Override
   protected void onResume() {
-    super.onResume();
-    if(current_ContentView==mGLView && mGLView!=null) {
+    if(current_ContentView==mGLView) {
       mGLView.onResume();
     }
+    super.onResume();
     // Additions needed by modules, e.g. gps
     @ANDROID_JAVA_ONRESUME@
   }
