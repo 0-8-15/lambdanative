@@ -264,8 +264,6 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
 
     mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
 
-    requestAllPermissions();
-
     // MUST NOT run before nativeInstanceInit completed
     // and MUST NOT run before permission checks
     if(LOG_LAYOUT) Log.i(TAG, "Setting content view");
