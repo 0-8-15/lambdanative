@@ -196,6 +196,8 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     WindowManager.LayoutParams.FLAG_FULLSCREEN);
     // prevent sleep
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    // get the permissions the `nativeInstanceInit` may require any
+    requestAllPermissions();
     if(mGLView==null) { // once only!
       mGLView = new xGLSurfaceView(this);
       // This may better before other pieces
@@ -203,8 +205,6 @@ public class @SYS_APPNAME@ extends Activity implements @ANDROID_JAVA_IMPLEMENTS@
     }
 
     mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
-
-    requestAllPermissions();
 
     // MUST NOT run before nativeInstanceInit completed
     // and MUST NOT run before permission checks
