@@ -47,6 +47,7 @@
            (onclick-set! (method "LNjScheme_Set_OnClickListener" app "android.view.View" "java.lang.Object"))
            (checkOrRequestPermission (method "checkOrRequestPermission" app "java.lang.String"))
            (loadUrl (method "loadUrl" "android.webkit.WebView" "java.lang.String"))
+           (getUrl (method "getUrl" "android.webkit.WebView"))
            (wv-can-go-back? (method "canGoBack" "android.webkit.WebView"))
            (wv-goBack! (method "goBack" "android.webkit.WebView"))
            (wv-setClient! (method "setWebViewClient" "android.webkit.WebView" "android.webkit.WebViewClient"))
@@ -69,6 +70,7 @@
              (back-pressed-h #f)
              (reload (new "android.widget.Button" this))
              (Button3 (new "android.widget.Button" this))
+             (Bcopy (new "android.widget.Button" this))
              )
          (define (switch-back-to-glgui! v)
            (on-back-pressed back-pressed-h)
@@ -88,10 +90,13 @@
            (begin
              (setText Button3 (String "JS+-"))
              (onclick-set! this Button3 js+-))
+           (begin
+             (setText Bcopy (String "COPY"))
+             (onclick-set! this Bcopy (lambda _ (setClipboardContent (getUrl wv)))))
            (wvs-zoom-support-set! wvs #t)
            (wvs-zoom-builtin-set! wvs #t)
            (wvs-zoom-builtin-controls-set! wvs #f))
-         (arrange-in-order! navigation (list back reload Button3))
+         (arrange-in-order! navigation (list back reload Button3 Bcopy))
          (setText back (String "Back"))
          (setText reload (String "Reload"))
          (onclick-set! this back switch-back-to-glgui!)
@@ -101,6 +106,7 @@
          (lambda (cmd arg)
            (case cmd
              ((load) (webview! wv cmd arg))
+             ((getURL) (getUrl wv))
              (else
               (if (not back-pressed-h)
                   (begin
@@ -121,6 +127,7 @@
                (cond
                 ((eq? a1 #t) '(webview #t #t))
                 ((string? a1) `(webview 'load ,a1))
+                ((eq? a1 'getURL) `(webview 'getURL #t))
                 (else (otherwise))))))))
         (webview-running #f))
     (lambda args

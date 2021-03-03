@@ -31,6 +31,24 @@ LNjSchemeEvaluate
     LNjScheme.Scheme.list
     (LNjScheme.Scheme.sym("webview-set-proxy!"), LNjScheme.Scheme.sym("list"))));
 
+LNjSchemeEvaluate
+  (LNjScheme.Scheme.cons
+   (LNjScheme.Scheme.sym("define"),
+    LNjScheme.Scheme.list
+    (LNjScheme.Scheme.sym("setclipboardcontent"),
+     new LNMethod("setclipboardcontent") {
+       public Object apply(LNjScheme.Scheme interpreter, Object args) {
+         if(args instanceof LNjScheme.Pair) {
+           Object a1 = null;
+           a1 = LNjScheme.Scheme.first(args);
+           if(a1 instanceof String) {
+             return setClipboardContent((String)a1);
+           }
+         }
+         return LNjScheme.Scheme.error("setClipboardContent" + args);
+       }}
+     )));
+
 /*
     (lnjscheme-eval
           `(let ((String (lambda (x) (new "java.lang.String" x)))
