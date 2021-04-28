@@ -328,6 +328,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (set! %%glCore:textures-ref glCore:textures-ref)
     (set! glCoreTextureCreate %%glCoreTextureCreate))
 
+  (define glCore:curtexture -1) ;; deprecated but required
+
   ) ;; end of tentative changes
  (else ;; old version
 
@@ -414,7 +416,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          num #!optional
          (failure (lambda (num) (error "glCore:textures-ref: unbound index" num))))
   (cond
-   ((fixnum? num) (or (%%glCore:textures-ref t #f) (failure num)))
+   ((fixnum? num) (or (%%glCore:textures-ref num #f) (failure num)))
    (else (error "not a fixnum" num glCore:textures-ref))))
 
 ;; return texture width
