@@ -261,6 +261,8 @@ fi
 echo " => transferring java hook.."
 appdir=$tmpdir/src/$SYS_PACKAGE_SLASH
 ac_output loaders/android/bootstrap.java.in $appdir/$SYS_APPNAME.java
+ac_output loaders/android/NativeGLSurfaceView.java.in $appdir/NativeGLSurfaceView.java
+ac_output loaders/android/GLState.java.in $appdir/GLState.java
 
 echo " => transferring java public classes and jars from modules.."
 for m in $modules; do

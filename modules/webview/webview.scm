@@ -6,7 +6,7 @@
        (lambda (expr)
          (cond-expand
           (android
-           ;; (log-debug "jScheme EVAL:" 1 expr)
+           (log-debug "jScheme EVAL:" 1 expr)
            (call-with-lnjscheme-result
             expr
             (lambda (promise)
@@ -19,7 +19,9 @@
                      (pretty-print expr port)
                      (display "EXN: " port)
                      (display-exception exn port)))))
-               (lambda () (success (force promise)))))))
+               (cond
+                ((procedure? promise) (lambda () (success (promise))))
+                (else (lambda () (success (force promise)))))))))
           (else #f)))
        body))
     'jscheme-worker))
@@ -71,7 +73,7 @@
          (define (switch-back-to-glgui! v)
            (on-back-pressed back-pressed-h)
            (set! back-pressed-h #f)
-           (setContentView this ln-mglview))
+           (setContentView this (lambdanative-glview)))
          (define (back-pressed)
            (if (wv-can-go-back? wv) (wv-goBack! wv) (switch-back-to-glgui! frame)))
          ;; (webview! wv 'onpagecomplete (lambda (view url) (log-message "webview post visual state")))
@@ -94,7 +96,6 @@
          (setText reload (String "Reload"))
          (onclick-set! this back switch-back-to-glgui!)
          (onclick-set! this reload (lambda (v) ((method "reload" "android.webkit.WebView") wv)))
-         (set-layout-vertical! frame)
          (set-layout-vertical! frame)
          (arrange-in-order! frame (list navigation wv))
          (lambda (cmd arg)
