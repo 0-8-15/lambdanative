@@ -3,17 +3,14 @@
 void android_show_keypad(){
   JNIEnv *env = GetJNIEnv();
   if (env&&globalObj){
-    jclass main_class = (*env)->FindClass(env, "@SYS_PACKAGE_SLASH@/@SYS_APPNAME@");
-    if(main_class) {
-      jmethodID method = (*env)->GetMethodID(env, main_class, "showKeyboard", "()V");
-      /* (*env)->DeleteLocalRef(env, main_class); */
-      if(!method) {
-        JNI_forward_exception_to_gambit(env);
-      } else {
-        (*env)->CallVoidMethod(env, globalObj, method);
-        /* (*env)->DeleteLocalRef(env, method); */
-        JNI_forward_exception_to_gambit(env);
-      }
+    jmethodID method = (*env)->GetMethodID(env, main_class, "showKeyboard", "()V");
+    /* (*env)->DeleteLocalRef(env, main_class); */
+    if(!method) {
+      JNI_forward_exception_to_gambit(env);
+    } else {
+      (*env)->CallVoidMethod(env, globalObj, method);
+      /* (*env)->DeleteLocalRef(env, method); */
+      JNI_forward_exception_to_gambit(env);
     }
   }
 }
@@ -21,17 +18,14 @@ void android_show_keypad(){
 void android_hide_keypad(){
   JNIEnv *env = GetJNIEnv();
   if (env&&globalObj){
-    jclass main_class = (*env)->FindClass(env, "@SYS_PACKAGE_SLASH@/@SYS_APPNAME@");
-    if(main_class) {
-      jmethodID method = (*env)->GetMethodID(env, main_class, "hideKeyboard", "()V");
-      /* (*env)->DeleteLocalRef(env, main_class); */
-      if(!method) {
-        JNI_forward_exception_to_gambit(env);
-      } else {
-        (*env)->CallVoidMethod(env, globalObj, method);
-        /* (*env)->DeleteLocalRef(env, method); */
-        JNI_forward_exception_to_gambit(env);
-      }
+    jmethodID method = (*env)->GetMethodID(env, main_class, "hideKeyboard", "()V");
+    /* (*env)->DeleteLocalRef(env, main_class); */
+    if(!method) {
+      JNI_forward_exception_to_gambit(env);
+    } else {
+      (*env)->CallVoidMethod(env, globalObj, method);
+      /* (*env)->DeleteLocalRef(env, method); */
+      JNI_forward_exception_to_gambit(env);
     }
   }
 }
