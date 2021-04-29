@@ -100,7 +100,7 @@ void Java_@SYS_PACKAGE_UNDERSCORE@_@SYS_APPNAME@_nativeEvent(JNIEnv* e, jobject 
 // JNI Hooks and Global Objects
 static JavaVM* s_vm = NULL; // The JVM instance this code runs in.
 static jclass main_class = NULL; // required to look up methods by components
-static jobject globalObj = NULL; // The (only one) `Activity` ofbject of `main_class`.
+static jobject globalObj = NULL; // The (only one) `Activity` object of `main_class`.
 static const char* app_directory_files = NULL;
 static const char* app_code_path = NULL;
 
@@ -318,14 +318,8 @@ void android_launch_url(char* urlstring){
   JNIEnv *env = GetJNIEnv();
   if (env&&globalObj) {
     jstring jurlstring = (*env)->NewStringUTF(env, urlstring);
-    jclass cls = main_class;
-    jmethodID method = cls ? (*env)->GetMethodID(env, cls, "openURL", "(Ljava/lang/String;)V") : NULL;
-    if(method) {
-      (*env)->CallVoidMethod(env, globalObj, method, jurlstring);
-      (*env)->DeleteLocalRef(env, method);
-    }
-    if(jurlstring) (*env)->DeleteLocalRef(env, jurlstring);
-    if(cls) (*env)->DeleteLocalRef(env, cls);
+    jmethodID method = (*env)->GetMethodID(env, main_class, "openURL", "(Ljava/lang/String;)V");
+    if(method) (*env)->CallVoidMethod(env, globalObj, method, jurlstring);
     JNI_forward_exception_to_gambit(env);
   }
 }
