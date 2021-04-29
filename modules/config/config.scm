@@ -150,13 +150,6 @@ end-of-decl
   (with-exception-catcher (lambda (e) #f)
     (lambda () (create-directory (system-directory)))))
 
-;; Disable the android heartbeat as it causes problems. Note that for 4.7.9 this
-;; has to be below the definition of system-platform to avoid an (#!unbound2)
-;; *** ERROR IN test# -- Operator is not a PROCEDURE
-(cond-expand
- (gambit-c (if (string=? (system-platform) "android") (##heartbeat-interval-set! -1.)))
- (else (if (string=? (system-platform) "android") (##set-heartbeat-interval! -1.))))
-
 (cond-expand
  (android
   (define android-FilesDir (c-lambda () char-string "android_getFilesDir"))
