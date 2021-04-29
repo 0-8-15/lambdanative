@@ -87,6 +87,48 @@ end-of-c-declare
 
 (define force-terminate (c-lambda () void "force_terminate"))
 
+(define microgl-swapbuffers
+  (c-lambda
+   () void "
+#if !defined(STANDALONE)
+ microgl_swapbuffers();
+#endif
+"))
+
+(define microgl-window
+  (c-lambda
+   (int int) void "
+#if !defined(STANDALONE)
+ microgl_window(___arg1, ___arg2);
+#endif
+"))
+
+(define microgl-fullscreen
+  (c-lambda
+   (int int) void "
+#if !defined(STANDALONE)
+ microgl_fullscreen(___arg1, ___arg2);
+#endif
+"))
+
+(c-declare
+ #<<end-of-decl
+#define MICROGL_REDRAW_PERIOD 250000 // micro seconds
+unsigned int microgl_redraw_period(unsigned int arg) {
+ // microgl_check_period is for the C side to query.
+ static unsigned int x = MICROGL_REDRAW_PERIOD;
+  // if arg is zero, return current value only
+  if( arg > 0 ) x = arg;
+  return x;
+}
+end-of-decl
+)
+
+(define (microgl-redraw-period . arg)
+  (cond
+   ((null? arg) ((c-lambda (unsigned-int) unsigned-int "microgl_redraw_period") 0))
+   (else ((c-lambda (unsigned-int) unsigned-int "microgl_redraw_period") (car arg)))))
+
 ;; Cleanup and exit with given exit code.  (Unlike force-terminate,
 ;; which always exists with zero.)
 ;;
