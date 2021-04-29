@@ -47,9 +47,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (define glCore:customhook #f)
 (define (glCore-registerhook h) (set! glCore:customhook h))
 
+(cond-expand
+ (android
+  (c-declare
+   ;; calls GLState.fromNativeInitDraw()
+   "extern void microgl_draw_before();")
+  (define-macro (microgl-draw-before)
+    '((c-lambda () void "microgl_draw_before"))))
+ (else
+  (define-macro (microgl-draw-before)
+    #!void)))
+
 (define glCore:needsinit #t)
 (define (glCoreInit)
-  (if (and glCore:customhook app:width app:height) (begin 
+  (microgl-draw-before)
+  (begin
+    ;; This block faithful rebuilds the legacy sequence, which was
+    ;; done in main.c/microgl_hook before on any EVENT_REDRAW
+    (glClearColor 0. 0. 0. 0.)
+    (glMatrixMode GL_PROJECTION)
+    (glLoadIdentity) ;; ?? Isn't only the last of these actually effective?
+    (glOrtho 0. (exact->inexact app:width) 0. (exact->inexact app:height) -1. 1.)
+    (glMatrixMode GL_MODELVIEW)
+    (glLoadIdentity)
+    (glClear GL_COLOR_BUFFER_BIT))
+  (if (and glCore:customhook app:width app:height) (begin
     (glDisable GL_BLEND)
     (glCore:customhook) 
     (glDisable GL_CULL_FACE)

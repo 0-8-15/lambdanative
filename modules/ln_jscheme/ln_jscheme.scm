@@ -76,8 +76,7 @@ NULL;
            ;; etc. by default force it expection the application to
            ;; abort on any exception.
            (receiver promise))))
-      (jscheme-send (object->string obj))
-      (thread-yield!))
+      (jscheme-send (object->string obj)))
     jscheme-call))
 
 (define (lnjscheme-future obj)
