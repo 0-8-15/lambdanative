@@ -1,4 +1,4 @@
-/* -*-C-*- */
+/* ln_jscheme -*-C-*- */
 
 #if DEBUG
 #define LOGJSC(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "@SYS_PACKAGE_UNDERSCORE@_@SYS_APPNAME@_jScheme", __VA_ARGS__))
@@ -41,8 +41,10 @@ const char* lnjscheme_eval(const char* input)
     /* if(main_class) (*env)->DeleteLocalRef(env, main_class); */
     if(jstr) { (*env)->ReleaseStringUTFChars(env, jstr, str); jstr = NULL; }
     jstr = (jstring) (*env)->CallObjectMethod(env, globalObj, method, jin);
+    /*
     (*env)->DeleteLocalRef(env, method);
     (*env)->DeleteLocalRef(env, jin);
+    */
     str  = jstr ? (*env)->GetStringUTFChars(env, jstr, 0) : NULL;
     // (*env)->ReleaseStringUTFChars(env, jstr, str);  // we do it upon next call
     JNI_forward_exception_to_gambit(env);
@@ -109,3 +111,5 @@ const char* lnjscheme_eval_receive_result()
   }
   return str;
 }
+
+/* EOF ln_jscheme */
