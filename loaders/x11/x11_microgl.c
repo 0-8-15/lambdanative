@@ -73,7 +73,7 @@ extern "C" {
 
 static Display *Dpy=0;
 static int Scrn=0;
-static char *copiedString = NULL;
+static unsigned char *copiedString = NULL;
 static int copiedStringLen = 0;
 
 // window data structure
@@ -505,7 +505,7 @@ int microgl_open(int w, int h, int fs)
   XSetIconName( Dpy, win.Win, SYS_APPNAME);
 
   XClassHint* classHint = XAllocClassHint();
-  classHint->res_name = SYS_APPNAME;
+  classHint->res_name = (char*) SYS_APPNAME;
   XSetClassHint( Dpy, win.Win, classHint);
   XFree(classHint);
 
@@ -562,12 +562,12 @@ Window microgl_getWindow(){ return win.Win; }
 
 void microgl_setCopiedString(char* str, int len) {
   if (copiedString) free(copiedString);
-  copiedString = calloc(len + 1, sizeof(char));
+  copiedString = (unsigned char*) calloc(len + 1, sizeof(char));
   memcpy(copiedString, str, len * sizeof(char));
   copiedStringLen = len;
 }
 
-void microgl_getCopiedString(char** str) {
+void microgl_getCopiedString(unsigned char** str) {
   *str = copiedString;
 }
 
