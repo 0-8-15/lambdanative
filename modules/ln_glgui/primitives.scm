@@ -252,18 +252,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define find-font/desc)
 
-(define (ln-ttf:font-ref font char) ;; -> legacy glyph
-  (cond
-   ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
-    (let ((entry (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f)))
-      (and entry (macro-ln-ttf:glyph-desc entry))))
-   (else (ln-ttf:font-ref (find-font font) char))))
-
-(define (MATURITY+1:ln-ttf:font-ref font char) ;; -> glyph
+(define (ln-ttf:font-ref font char) ;; -> glyph
   (cond
    ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
     (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f))
-   (else (error "illegal arguments" MATURITY+1:ln-ttf:font-ref font char))))
+   (else (error "illegal arguments" ln-ttf:font-ref font char))))
 
 (define (make-ln-ttf:font/desc fnt)
   (define (convert desc g)
@@ -353,7 +346,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define (glgui:fontheight fnt)
   (cond
-   ((macro-ln-ttf:font? fnt) (ttf:glyph-height (MATURITY+1:ln-ttf:font-ref fnt 0)))
+   ((macro-ln-ttf:font? fnt) (ttf:glyph-height (ln-ttf:font-ref fnt 0)))
    ((find-font fnt) => glgui:fontheight)
    (else ;; MATURITY -1 backward compatible, the old code
     (let* ((g (assoc 0 fnt))
