@@ -180,23 +180,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;; ----------
 ;; strings (aka pixmap lists)
 
-(define glgui:image-w car)
-(define glgui:image-h cadr)
-(define glgui:glyph-image cadr)
-
-;; support both legacy latex and new truetype rendering
-;; eventually this should be stripped out for better performance
-(define (glgui:glyph-offsetx g)
-  ;; FIXME: avoid length in tight loops and frequently run code for
-  ;; being O(n), if at all possible.
-  (if (fx= (length g) 5) (list-ref g 2) 0))
-(define (glgui:glyph-offsety g)
-  (if (fx= (length g) 5) (list-ref g 4)
-     (glgui:image-h (glgui:glyph-image g))))
-(define (glgui:glyph-advancex g)
-  (if (fx= (length g) 5) (list-ref g 3)
-    (glgui:image-w (glgui:glyph-image g))))
-
 (define glgui:string->glyphs #f)
 (define glgui:glyphs->string #f)
 
@@ -252,18 +235,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define find-font/desc)
 
-(define (ln-ttf:font-ref font char) ;; -> legacy glyph
-  (cond
-   ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
-    (let ((entry (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f)))
-      (and entry (macro-ln-ttf:glyph-desc entry))))
-   (else (ln-ttf:font-ref (find-font font) char))))
-
-(define (MATURITY+1:ln-ttf:font-ref font char) ;; -> glyph
+(define (ln-ttf:font-ref font char) ;; -> glyph
   (cond
    ((macro-ln-ttf:font? font) ;; TBD: leave this as the only case
     (table-ref (macro-ln-ttf:font-char->glyph-table font) char #f))
-   (else (error "illegal arguments" MATURITY+1:ln-ttf:font-ref font char))))
+   (else (error "illegal arguments" ln-ttf:font-ref font char))))
 
 (define (make-ln-ttf:font/desc fnt)
   (define (convert desc g)
@@ -276,6 +252,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 x1 y1
                 x0 y0
                 x1 y0)))
+          (cond-expand
+           (debug)
+           (else
+            ;; don't waste too much memory; TBD free global font variables too!
+            (set! desc #f)))
           (macro-make-ln-ttf:glyph
            desc width height texture
            texcoords rect-texcoords
@@ -341,34 +322,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (let loop ((x0 (flo x)) (cs (glgui:string->glyphs txt)))
     (if (pair? cs)
       (let* ((charcode (car cs))
-             (g (assoc charcode fnt))
-             (i (if g (glgui:glyph-image g) #f))
-             (gh (if i (flo (glgui:image-h i)) 0.))
-             (gox (if g (flo (glgui:glyph-offsetx g)) 0.))
-             (goy (if g (flo (glgui:glyph-offsety g)) 0.))
-             (gax (if g (flo (glgui:glyph-advancex g)) 0.)))
+             (g (ln-ttf:font-ref fnt charcode))
+             (i (if g (macro-ln-ttf:glyph-texture g) #f))
+             (gh (if i (flo (macro-ln-ttf:glyph-height i)) 0.))
+             (gox (if g (flo (macro-ln-ttf:glyph-offsetx g)) 0.))
+             (goy (if g (flo (macro-ln-ttf:glyph-offsety g)) 0.))
+             (gax (if g (flo (macro-ln-ttf:glyph-advancex g)) 0.)))
           (if (and i (not (fx= charcode 32)))
             (apply glCoreTextureDraw (append (list (fl+ x0 gox) (fl+ (flo y) goy (fl- gh))) i (list 0.))))
           (loop (fl+ x0 gax) (cdr cs))))))
 
 (define (glgui:fontheight fnt)
   (cond
-   ((macro-ln-ttf:font? fnt) (ttf:glyph-height (MATURITY+1:ln-ttf:font-ref fnt 0)))
+   ((macro-ln-ttf:font? fnt) (ttf:glyph-height (ln-ttf:font-ref fnt 0)))
    ((find-font fnt) => glgui:fontheight)
-   (else ;; MATURITY -1 backward compatible, the old code
-    (let* ((g (assoc 0 fnt))
-           (i (if g (glgui:glyph-image g) #f))
-           (h (if i (glgui:image-h i)
-                  (cadr (cadr (car fnt)))))) h))))
+   (else 0)))
 
 (define (glgui:stringheight txt fnt)
   (define font (find-font fnt))
   (let loop ((above 0.) (below 0.) (cs (glgui:string->glyphs txt)))
     (if (null? cs) (list above below)
       (let* ((g (ln-ttf:font-ref font (car cs)))
-             (i (if g (glgui:glyph-image g) #f))
-             (gh (if i (flo (glgui:image-h i)) 0.))
-             (goy (if g (flo (glgui:glyph-offsety g)) 0.)))
+             (i (if g (macro-ln-ttf:glyph-texture g) #f))
+             (gh (if i (flo (macro-ln-ttf:glyph-height g)) 0.))
+             (goy (if g (flo (macro-ln-ttf:glyph-offsety g)) 0.)))
         (loop (flmax above goy)  (flmin below (fl- goy gh)) (cdr cs))))))
 
 ; returns a fixnum width of the string, rounded up

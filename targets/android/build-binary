@@ -261,6 +261,8 @@ fi
 echo " => transferring java hook.."
 appdir=$tmpdir/src/$SYS_PACKAGE_SLASH
 ac_output loaders/android/bootstrap.java.in $appdir/$SYS_APPNAME.java
+ac_output loaders/android/NativeGLSurfaceView.java.in $appdir/NativeGLSurfaceView.java
+ac_output loaders/android/GLState.java.in $appdir/GLState.java
 
 echo " => transferring java public classes and jars from modules.."
 for m in $modules; do
@@ -317,8 +319,11 @@ for abi in $SYS_ANDROID_ABIs; do
     arch=x86_64
   ;;
   esac
-  libdir=$SYS_PREFIXROOT/android/${arch}${SYS_PLATFORM_VARIANT}/lib
-  lib=$libdir/libpayload.a
+  if [ "X$SYS_MODE" = "Xdebug" ]; then
+    lib=$SYS_PREFIXROOT/android-debug/${arch}${SYS_PLATFORM_VARIANT}/lib/libpayload.a
+  else
+    lib=$SYS_PREFIXROOT/android/${arch}${SYS_PLATFORM_VARIANT}/lib/libpayload.a
+  fi
   if [ -f $lib ]; then
     mkdir $tmpmoddir/libpayload/$abi
     cp $lib $tmpmoddir/libpayload/$abi

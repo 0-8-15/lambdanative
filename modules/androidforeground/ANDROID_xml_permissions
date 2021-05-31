@@ -1,5 +1,6 @@
 <uses-feature android:name="android.permission.FOREGROUND_SERVICE" android:required="true" />
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" android:required="false" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" android:required="true" />
 <!--
 
 With API level 26 REQUEST_IGNORE_BATTERY_OPTIMIZATIONS might be

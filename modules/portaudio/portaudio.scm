@@ -55,45 +55,56 @@ end-of-c-declare
 
 (define pa-devcount (c-lambda () int "
   if (portaudio_needsinit) { Pa_Initialize(); portaudio_needsinit=0; }
-  ___result=Pa_GetDeviceCount();
+  ___return(Pa_GetDeviceCount());
   "))
 
 (define pa-devinfo-name (c-lambda (int) char-string "
   if (portaudio_needsinit) { Pa_Initialize(); portaudio_needsinit=0; }
    PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo( ___arg1);
-  ___result=deviceInfo->name;
+  ___return((char*)deviceInfo->name);
   "))
 
 (define pa-devinfo-inputs (c-lambda (int) int "
   if (portaudio_needsinit) { Pa_Initialize(); portaudio_needsinit=0; }
    PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo( ___arg1);
-  ___result=deviceInfo->maxInputChannels;
+  ___return(deviceInfo->maxInputChannels);
   "))
 
 (define pa-devinfo-outputs (c-lambda (int) int "
   if (portaudio_needsinit) { Pa_Initialize(); portaudio_needsinit=0; }
    PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo( ___arg1);
-  ___result=deviceInfo->maxOutputChannels;
+  ___return(deviceInfo->maxOutputChannels);
   "))
 
 (define (pa-devlist)
   (let ((n (pa-devcount)))
-    (let loop ((i 0)(res '()))
-      (if (= i n) res
-        (loop (+ i 1) (append res (list
-          (list i (pa-devinfo-name i) (pa-devinfo-inputs i) (pa-devinfo-outputs i)))))))))
+    (let loop ((i 0) (res '()))
+      (if (eqv? i n)
+          (reverse! res)
+          (loop
+           (+ i 1)
+           (cons
+            (list i (pa-devinfo-name i) (pa-devinfo-inputs i) (pa-devinfo-outputs i))
+            res))))))
 
 (define (pa-devlist-outputs)
-  (let loop ((ds (pa-devlist))(res '()))
-    (if (fx= (length ds) 0) res
-       (loop (cdr ds) (append res
-         (if (> (cadddr (car ds)) 0) (list (car ds)) '()))))))
+  (let loop ((ds (pa-devlist)) (res '()))
+    (if (null? ds)
+        (reverse! res)
+        (loop (cdr ds)
+              (cond
+               ((> (cadddr (car ds)) 0) (cons (car ds) res))
+               (else res))))))
 
 (define (pa-devlist-inputs)
-  (let loop ((ds (pa-devlist))(res '()))
-    (if (fx= (length ds) 0) res
-       (loop (cdr ds) (append res
-         (if (> (caddr (car ds)) 0) (list (car ds)) '()))))))
+  (let loop ((ds (pa-devlist)) (res '()))
+    (if (null? ds)
+        (reverse! res)
+        (loop (cdr ds)
+              (cond
+               ((> (caddr (car ds)) 0) (cons (car ds) res))
+               (else res))
+              (append res)))))
 
 (define (pa-dev-exists? devname)
   (member devname (map cadr (pa-devlist))))

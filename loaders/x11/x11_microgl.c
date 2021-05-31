@@ -46,6 +46,8 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -71,7 +73,7 @@ extern "C" {
 
 static Display *Dpy=0;
 static int Scrn=0;
-static char *copiedString = NULL;
+static unsigned char *copiedString = NULL;
 static int copiedStringLen = 0;
 
 // window data structure
@@ -89,7 +91,7 @@ typedef struct microglWindow {
   Atom WMDeleteWindow;
   int Scrn;
   int  w,h;
-  int  mouse_x, mouse_y; 
+  int  mouse_x, mouse_y;
   int KeyboardGrabbed, PointerGrabbed;
 } microglWindow;
 
@@ -113,6 +115,35 @@ void microgl_refresh()
   XSendEvent(Dpy, win.Win, False, Expose, &event);
   XSync(Dpy, 0);
 }
+
+static
+Bool _microgl_wait_redraw_required(Bool enforced) {
+  // Arrange pending check and process suspension.
+  //
+  // TBD: instead of a fixed wait, the Gambit site could get a handle
+  // to interrupt this sleep here.
+  static struct timeval next_draw = {0, 0};
+  struct timeval now;
+  time_t to = 0;
+  gettimeofday(&now, NULL);
+  to = (now.tv_sec > next_draw.tv_sec) ||
+    (now.tv_sec == next_draw.tv_sec) && (now.tv_usec > next_draw.tv_usec);
+  if(enforced || to ) {  // process expose events
+    to = now.tv_usec + microgl_redraw_period(0);
+    if(to>=1000000) {
+      next_draw.tv_usec = to % 1000000;
+      next_draw.tv_sec = now.tv_sec + (to / 1000000);
+    } else {
+      next_draw.tv_usec = to;
+      next_draw.tv_sec = now.tv_sec;
+    }
+    return True;  // redraw required
+  } else {
+    usleep(25000); // TBD do not hard code
+    return False; // no redraw, just re-check X events
+  }
+}
+
 
 // https://tronche.com/gui/x/xlib/events/keyboard-pointer/keyboard-pointer.html
 int _microgl_modifier(XKeyEvent *event) {
@@ -184,7 +215,7 @@ void _microgl_sendCopyStringEvent(XSelectionRequestEvent* selReqEv) {
     .time      = CurrentTime
   };
   if (copiedString && selReqEv->target == format && selReqEv->property != None) {
-    XChangeProperty(Dpy, selReqEv->requestor, selReqEv->property, format, 8, PropModeReplace, copiedString, copiedStringLen + 1);
+    XChangeProperty(Dpy, selReqEv->requestor, selReqEv->property, format, 8, PropModeReplace, copiedString, copiedStringLen);
   } else {
     selEv.property = None;
   }
@@ -194,8 +225,9 @@ void _microgl_sendCopyStringEvent(XSelectionRequestEvent* selReqEv) {
 void microgl_pollevents(void)
 {
   XEvent event;
-  int expose=0;
-  int motion=0;
+  // Some events are summarised in order to reduce load.
+  int expose=0; // summarised
+  int motion=0; // summarised
 
   while( XPending( Dpy ) ) {
     XNextEvent( Dpy, &event );
@@ -209,38 +241,38 @@ void microgl_pollevents(void)
       case ButtonPress:
         switch (event.xbutton.button) {
           case Button1:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON1DOWN,win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON1DOWN,win.mouse_x, win.mouse_y);
            break;
           case Button2:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON2DOWN, win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON2DOWN, win.mouse_x, win.mouse_y);
              break;
           case Button3:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON3DOWN, win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON3DOWN, win.mouse_x, win.mouse_y);
              break;
         }
         break;
       case ButtonRelease:
         switch (event.xbutton.button) {
           case Button1:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON1UP, win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON1UP, win.mouse_x, win.mouse_y);
            break;
           case Button2:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON2UP, win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON2UP, win.mouse_x, win.mouse_y);
            break;
           case Button3:
-           win.mouse_x = event.xbutton.x; 
+           win.mouse_x = event.xbutton.x;
            win.mouse_y = win.h - event.xbutton.y - 1;
-           microgl_hook(EVENT_BUTTON3UP, win.mouse_x, win.mouse_y); 
+           microgl_hook(EVENT_BUTTON3UP, win.mouse_x, win.mouse_y);
            break;
         }
         break;
@@ -252,12 +284,12 @@ void microgl_pollevents(void)
       case Expose:
         expose = expose || (event.xexpose.width && event.xexpose.height) ? 1 : 0;
         break;
-      case ClientMessage:  
+      case ClientMessage:
         if( (Atom) event.xclient.data.l[ 0 ] == win.WMDeleteWindow )
-        microgl_hook(EVENT_CLOSE,0,0); 
-        return; 
+        microgl_hook(EVENT_CLOSE, 0, 0);
+        return;
       case DestroyNotify:
-        microgl_hook(EVENT_CLOSE,0,0); 
+        microgl_hook(EVENT_CLOSE, 0, 0);
         return;
       case ConfigureNotify:
         if( event.xconfigure.width != win.w || event.xconfigure.height != win.h ) {
@@ -274,19 +306,24 @@ void microgl_pollevents(void)
       case SelectionRequest:
         _microgl_sendCopyStringEvent((XSelectionRequestEvent*) &event.xselectionrequest);
         break;
-    } 
+    }
   }  // Xpending
 
-  if (expose) {  // process expose events
-     microgl_hook(EVENT_REDRAW,0,0);
-     microgl_refresh();
-  }
+  // Immediate events done.  Handle summarized events.
 
 
   if (motion) { // process motion events
     microgl_hook(EVENT_MOTION, win.mouse_x, win.mouse_y);
   }
 
+  // Eventually update user interface.
+  if( _microgl_wait_redraw_required(expose) ) {
+    // _microgl_redraw_required arranges pending check and process
+    // suspension
+    microgl_hook(EVENT_REDRAW, 0, 0);
+  }
+  // All done for this round of event polling, return expected to call
+  // as soon as it assumes reasonable for another turn.
 }
 
 Bool _microglWaitForMapNotify( Display *d, XEvent *e, char *arg )
@@ -304,13 +341,13 @@ int microgl_open(int w, int h, int fs)
 
 // step 1: create the window
   wa.event_mask=ExposureMask|KeyPressMask|KeyReleaseMask|ButtonPressMask|ButtonReleaseMask;
-  if (!fs) wa.event_mask|= PointerMotionMask | StructureNotifyMask| ExposureMask | FocusChangeMask | VisibilityChangeMask; 
+  if (!fs) wa.event_mask|= PointerMotionMask | StructureNotifyMask| ExposureMask | FocusChangeMask | VisibilityChangeMask;
   win.Win=XCreateWindow(Dpy,DefaultRootWindow(Dpy),
     0,0,w,h,0,CopyFromParent,InputOutput,
     CopyFromParent,CWEventMask,&wa);
 
 // step 2: fullscreen tweaks
-    if (fs) { 
+    if (fs) {
       int success=0;
       Atom atom;
 
@@ -324,7 +361,7 @@ int microgl_open(int w, int h, int fs)
                      long input_mode;
             unsigned long status;
         } MWMHints = { MWM_HINTS_DECORATIONS, 0, 0, 0, 0 };
-        XChangeProperty( Dpy, win.Win, atom, atom, 32, 
+        XChangeProperty( Dpy, win.Win, atom, atom, 32,
           PropModeReplace, (unsigned char *)&MWMHints, sizeof(MWMHints)/4 );
         sucess=1;
       }
@@ -332,7 +369,7 @@ int microgl_open(int w, int h, int fs)
       atom = XInternAtom( Dpy, "KWM_WIN_DECORATION", True );
       if ( atom!= None ) {
         long KWMHints = KDE_tinyDecoration;
-        XChangeProperty( Dpy, win.Win, atom, atom, 32, 
+        XChangeProperty( Dpy, win.Win, atom, atom, 32,
             PropModeReplace, (unsigned char *)&KWMHints, sizeof(KWMHints)/4 );
         success= 1;
       }
@@ -341,27 +378,27 @@ int microgl_open(int w, int h, int fs)
       atom= XInternAtom(Dpy,"_WIN_HINTS",True);
       if ( atom != None ) {
         long GNOMEHints = 0;
-        XChangeProperty( Dpy, win.Win, atom, atom, 32, 
+        XChangeProperty( Dpy, win.Win, atom, atom, 32,
           PropModeReplace, (unsigned char *)&GNOMEHints, sizeof(GNOMEHints)/4 );
         success = 1;
       }
- 
+
       atom = XInternAtom( Dpy, "_NET_WM_WINDOW_TYPE", True );
       if ( atom != None ) {
         Atom NET_WMHints[2];
         NET_WMHints[0] = XInternAtom( Dpy, "_KDE_NET_WM_WINDOW_TYPE_OVERRIDE", True );
         NET_WMHints[1] = XInternAtom( Dpy, "_NET_WM_WINDOW_TYPE_NORMAL", True );
-        XChangeProperty( Dpy, win.Win, atom, XA_ATOM, 32, 
+        XChangeProperty( Dpy, win.Win, atom, XA_ATOM, 32,
           PropModeReplace, (unsigned char *)&NET_WMHints, 2 );
         success = 1;
       }
 
-      atom=XInternAtom(Dpy,"_NET_WM_STATE",True); 
+      atom=XInternAtom(Dpy,"_NET_WM_STATE",True);
       if (atom!=None) {
         Atom NET_WMHints[2];
         NET_WMHints[0] = XInternAtom( Dpy, "_NET_WM_STATE_FULLSCREEN",True);
         NET_WMHints[1] = XInternAtom( Dpy, "_NET_WM_STATE_ABOVE",True); // does not help
-        XChangeProperty(Dpy,win.Win,atom, XA_ATOM, 32, 
+        XChangeProperty(Dpy,win.Win,atom, XA_ATOM, 32,
           PropModeReplace, (unsigned char*)&NET_WMHints, 2);
         success=1;
       }
@@ -369,26 +406,26 @@ int microgl_open(int w, int h, int fs)
       atom=XInternAtom(Dpy,"_HILDON_NON_COMPOSITED_WINDOW",True);
       if (atom!=None) {
         int one=1;
-        XChangeProperty(Dpy,win.Win,atom, XA_INTEGER, 32, 
-          PropModeReplace, (unsigned char*)&one, 1); 
+        XChangeProperty(Dpy,win.Win,atom, XA_INTEGER, 32,
+          PropModeReplace, (unsigned char*)&one, 1);
         success=1;
       }
 
       // Hildon run in landscape mode by default
       // this is opposite of other mobiles !
-/* 
+/*
      atom=XInternAtom(Dpy,"_HILDON_PORTRAIT_MODE_SUPPORT",True);
       if (atom!=None) {
         long one=1;
         XChangeProperty(Dpy,win.Win,atom, XA_CARDINAL, 32,
           PropModeReplace, (unsigned char*)&one, 1);
-      }     
+      }
       atom=XInternAtom(Dpy,"_HILDON_PORTRAIT_MODE_REQUEST",True);
-      if (atom!=None) {                                          
+      if (atom!=None) {
         long one=1;
         XChangeProperty(Dpy,win.Win,atom, XA_CARDINAL, 32,
           PropModeReplace, (unsigned char*)&one, 1);
-      }  
+      }
 */
 
       if (success) {
@@ -420,7 +457,7 @@ int microgl_open(int w, int h, int fs)
 #endif
 
 #ifdef USE_EGL
-  { 
+  {
     EGLConfig ecfg;
     EGLint num_config;
  //   EGLint attr[]={EGL_BUFFER_SIZE,16,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES2_BIT, EGL_NONE};
@@ -436,7 +473,7 @@ int microgl_open(int w, int h, int fs)
     if (win.egl_surface==EGL_NO_SURFACE) { printf("ERROR 5\n"); return 0; }
     win.egl_context=eglCreateContext(win.egl_display, ecfg, EGL_NO_CONTEXT, ctxattr);
     if (win.egl_context==EGL_NO_CONTEXT) { printf("ERROR 6\n"); return 0; }
-    eglMakeCurrent(win.egl_display,win.egl_surface,win.egl_surface,win.egl_context); 
+    eglMakeCurrent(win.egl_display,win.egl_surface,win.egl_surface,win.egl_context);
   }
 #endif
 
@@ -469,7 +506,7 @@ int microgl_open(int w, int h, int fs)
   XSetIconName( Dpy, win.Win, SYS_APPNAME);
 
   XClassHint* classHint = XAllocClassHint();
-  classHint->res_name = SYS_APPNAME;
+  classHint->res_name = (char*) SYS_APPNAME;
   XSetClassHint( Dpy, win.Win, classHint);
   XFree(classHint);
 
@@ -478,7 +515,7 @@ int microgl_open(int w, int h, int fs)
   glClearColor(0,0,0,0);
   glClear( GL_COLOR_BUFFER_BIT );
   microgl_swapbuffers();
- 
+
   return 1;
 }
 
@@ -498,7 +535,7 @@ void microgl_close()
 #endif
   if (win.KeyboardGrabbed) {
     XUngrabKeyboard(Dpy,CurrentTime);
-  } 
+  }
   if (win.PointerGrabbed) {
     XUngrabPointer(Dpy, CurrentTime);
   }
@@ -526,12 +563,12 @@ Window microgl_getWindow(){ return win.Win; }
 
 void microgl_setCopiedString(char* str, int len) {
   if (copiedString) free(copiedString);
-  copiedString = calloc(len + 1, sizeof(char));
+  copiedString = (unsigned char*) calloc(len + 1, sizeof(char));
   memcpy(copiedString, str, len * sizeof(char));
   copiedStringLen = len;
 }
 
-void microgl_getCopiedString(char** str) {
+void microgl_getCopiedString(unsigned char** str) {
   *str = copiedString;
 }
 

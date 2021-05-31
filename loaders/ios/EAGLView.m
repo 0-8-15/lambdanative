@@ -77,8 +77,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     CAEAGLLayer *eaglLayer = (CAEAGLLayer *)self.layer;
     eaglLayer.opaque = YES;
     eaglLayer.drawableProperties = [NSDictionary dictionaryWithObjectsAndKeys:
-    [NSNumber numberWithBool:NO], 
-    kEAGLDrawablePropertyRetainedBacking, 
+    [NSNumber numberWithBool:YES],
+    kEAGLDrawablePropertyRetainedBacking,
     kEAGLColorFormatRGBA8, kEAGLDrawablePropertyColorFormat, nil];
     context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES1];
     if (!context || ![EAGLContext setCurrentContext:context]) {
@@ -93,7 +93,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_MULTITOUCH
   [self setMultipleTouchEnabled:YES];
-#endif 
+#endif
 
   return self;
 }
@@ -124,7 +124,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   }
 }
 
-// equivalent to button release 
+// equivalent to button release
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
   DMSG("EAGLView: touchesEnded");
   for( UITouch *t in touches ) {
@@ -145,11 +145,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Rendering
 - (void)drawView {
   DMSG("EAGLView: drawView render=%i",render);
-  if (render) {		
+  if (render) {
     [EAGLContext setCurrentContext:context];
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);
     glViewport(0, 0, backingWidth, backingHeight);
-  } 
+  }
 
   ffi_event(EVENT_REDRAW,render,0);
 
@@ -178,6 +178,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &backingWidth);
   glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &backingHeight);
   if (USE_DEPTH_BUFFER) {
+    NSLog(@"   * layer-backed: {w = %i, h = %i}", backingWidth, backingHeight);
     glGenRenderbuffersOES(1, &depthRenderbuffer);
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, depthRenderbuffer);
     glRenderbufferStorageOES(GL_RENDERBUFFER_OES, GL_DEPTH_COMPONENT16_OES, backingWidth, backingHeight);
@@ -214,7 +215,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - (void)startAnimation {
   DMSG("EAGLView: startAnimation");
-  self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:animationInterval 
+  self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:animationInterval
                           target:self selector:@selector(drawView) userInfo:nil repeats:YES];
   render=1;
 }
@@ -245,7 +246,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   if ([EAGLContext currentContext] == context) {
     [EAGLContext setCurrentContext:nil];
   }
-  [context release];	
+  [context release];
   [super dealloc];
 }
 

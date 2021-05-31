@@ -378,6 +378,7 @@ compile_payload()
   hookhash=`stringhash "apps/$SYS_APPNAME/hook.c"`
   hctgt="$SYS_PREFIX/build/$hookhash.c"
   hotgt=`echo "$hctgt" | sed 's/c$/o/'`
+  rmifexists "$hotgt"
   cp loaders/hook/hook.c "$hctgt"
   veval "$SYS_ENV $SYS_CC $payload_cdefs $languages_def -c -o $hotgt $hctgt -I$SYS_PREFIX/include"
   assertfile $hotgt
@@ -1055,6 +1056,9 @@ make_setup_target()
   ac_subst LDFLAG_ADDITIONS "$ldflag_additions"
   #--------
   . $setup_target
+  if [ "X$SYS_MODE" = "Xdebug" ]; then
+    SYS_PREFIX="${SYS_PREFIX}-debug"
+  fi
   if [ ! "X$SYS_CPU" = "X" ]; then
     SYS_PREFIX="$SYS_PREFIX/$SYS_CPU"
   fi
