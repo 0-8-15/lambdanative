@@ -311,6 +311,7 @@ void microgl_pollevents(void)
 
   // Immediate events done.  Handle summarized events.
 
+
   if (motion) { // process motion events
     microgl_hook(EVENT_MOTION, win.mouse_x, win.mouse_y);
   }
